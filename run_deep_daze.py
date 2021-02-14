@@ -20,7 +20,7 @@ def create_text_path(text=None, img=None, encoding=None):
     return input_name
 
 
-def run(text=None, img=None, encoding=None, name=None, **args):
+def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
     input_name = ""
     if name is not None:
         input_name += name
@@ -37,9 +37,9 @@ def run(text=None, img=None, encoding=None, name=None, **args):
     
     original_dir = os.getcwd()
     time_str = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
-    name = time_str + "_" + input_name
+    name = os.path.join("deepdaze", str(image_width), time_str + "_" + input_name)
     os.makedirs(name, exist_ok=True)
-    # coppy start image to folder
+    # copy start image to folder
     args = dict(args)
     if "start_image_path" in args:
         subprocess.run(["cp", args["start_image_path"], name])
@@ -53,7 +53,7 @@ def run(text=None, img=None, encoding=None, name=None, **args):
             batch_size = 8,
             gradient_accumulate_every = 2,
             epochs = 12,
-            image_width=256,
+            image_width=image_width,
             save_progress=True,
             open_folder=True,
             start_image_train_iters=200,
