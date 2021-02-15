@@ -74,6 +74,9 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         
         # train
         imagine()
+        # make mp4
+        subprocess.run(["ffmpeg", "-i", input_name + ".000%03d.png", "-pix_fmt", "yuv420p", input_name + ".mp4"])
+        # ffmpeg -i your_encoding.000%03d.png -pix_fmt yuv420p dmt.mp4
         # save
         torch.save(imagine.cpu(), "model.pt")
         del imagine
@@ -83,7 +86,7 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", default=8, type=int)
-parser.add_argument("--num_layers", default=44, type=int)
+parser.add_argument("--num_layers", default=44, type=nt)
 parser.add_argument("--image_width", default=256, type=int)
 parser.add_argument("--gradient_accumulate_every", default=2, type=int)
 
