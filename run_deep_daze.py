@@ -31,7 +31,7 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         input_name += text.replace(" ", "_")
     if img is not None:
         if isinstance(img, str):
-            input_name += "".join(img.replace(" ", "_").split(".")[:-1])
+            input_name += "_" + "".join(img.replace(" ", "_").split(".")[:-1])
         else:
             input_name += "_PIL_img"
     if input_name == "":
@@ -50,9 +50,8 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         subprocess.run(["cp", img, name])
     os.chdir(name)
     # save hyperparams:
-    with open("hyperparams.json", "w+"):
-        json.dump(args)
-
+    with open("hyperparams.json", "w+") as f:
+        json.dump(args, f)
 
     try:
         imagine = Imagine(
@@ -62,7 +61,6 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
             save_progress=True,
             open_folder=True,
             start_image_train_iters=200,
-            save_every=50,
             **args
            )
         # set goal
@@ -76,7 +74,6 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         imagine()
         # make mp4
         subprocess.run(["ffmpeg", "-i", input_name + ".000%03d.png", "-pix_fmt", "yuv420p", input_name + ".mp4"])
-        # ffmpeg -i your_encoding.000%03d.png -pix_fmt yuv420p dmt.mp4
         # save
         torch.save(imagine.cpu(), "model.pt")
         del imagine
@@ -86,25 +83,42 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", default=8, type=int)
-parser.add_argument("--num_layers", default=44, type=nt)
+parser.add_argument("--num_layers", default=44, type=int)
 parser.add_argument("--image_width", default=256, type=int)
 parser.add_argument("--gradient_accumulate_every", default=2, type=int)
-
+parser.add_argument("--save_every", default=25, type=int)
 
 args = parser.parse_args()
 args = vars(args)
 
 
+run(text="Instagram", **args)
+run(text="Instagram addiction", **args)
+
+run("The scream by Edward Munch")
+
+run(text="A climber climbing a large mountain", **args)
+run(text="Surfing a big wave in the ocean", **args)
+run(text="A peaceful walk in the forest", **args)
+run(text="Torment in hell by demonic creatures", **args)
+
+run(text="A monkey painting a painting", **args)
+run(text="Chaos", **args)
+
+run(text="The universe", **args)
+run(text="The milky way", **args)
+run(text="A photo of a supernova", **args)
+run(text="Wondering about life while looking at the night sky", **args)
+
+run(text="An image of a dog having a spiritual experience", **args)
+
+quit()
 #run(text="Love is the answer!", img="hot-dog.jpg")
 
 run(text="Magic Mushrooms", **args)
-run(text="Ketamine", **args)
 run(text="Mescaline", **args)
 run(text="Salvia Divinorum", **args)
 run(text="DMT", **args)
-run(text="2-CB", **args)
-run(text="MDMA", **args)
-run(text="Ecstacy", **args)
 
 
 run(text="A psychedelic experience on magic mushrooms", **args)
