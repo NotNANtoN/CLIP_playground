@@ -1,10 +1,13 @@
+import argparse
 import time
 import os
 import subprocess
+import json
 
 import torch
 
-from deep_daze_repo.deep_daze.deep_daze import Imagine
+#from deep_daze_repo.deep_daze.deep_daze import Imagine
+from deep_daze import Imagine
 
 
 def create_text_path(text=None, img=None, encoding=None):
@@ -31,7 +34,7 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
             input_name += "".join(img.replace(" ", "_").split(".")[:-1])
         else:
             input_name += "_PIL_img"
-    else:
+    if input_name == "":
         input_name += "your_encoding"
     
     
@@ -46,12 +49,14 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
     if img is not None and isinstance(img, str):
         subprocess.run(["cp", img, name])
     os.chdir(name)
+    # save hyperparams:
+    with open("hyperparams.json", "w+"):
+        json.dump(args)
+
 
     try:
-        imagine = Imagine(            
-            num_layers = 44,
-            batch_size = 8,
-            gradient_accumulate_every = 2,
+        imagine = Imagine(
+            text=text,
             epochs = 12,
             image_width=image_width,
             save_progress=True,
@@ -61,11 +66,11 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
             **args
            )
         # set goal
-        if encoding is None and text is not None and img is not None:
+        #if encoding is None and text is not None and img is not None:
             # merge img and text
-            encoding = (imagine.create_img_encoding(img) + imagine.create_text_encoding(text)) / 2
+        #    encoding = (imagine.create_img_encoding(img) + imagine.create_text_encoding(text)) / 2
         
-        imagine.set_clip_encoding(text=text, img=img, encoding=encoding)
+        #imagine.set_clip_encoding(text=text, img=img, encoding=encoding)
         
         # train
         imagine()
@@ -76,29 +81,39 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
     finally:
         os.chdir(original_dir)
 
-        
+parser = argparse.ArgumentParser()
+parser.add_argument("--batch_size", default=8, type=int)
+parser.add_argument("--num_layers", default=44, type=int)
+parser.add_argument("--image_width", default=256, type=int)
+parser.add_argument("--gradient_accumulate_every", default=2, type=int)
+
+
+args = parser.parse_args()
+args = vars(args)
+
+
 #run(text="Love is the answer!", img="hot-dog.jpg")
 
-run(text="Magic Mushrooms")
-run(text="Ketamine")
-run(text="Mescaline")
-run(text="Salvia Divinorum")
-run(text="DMT")
-run(text="2-CB")
-run(text="MDMA")
-run(text="Ecstacy")
+run(text="Magic Mushrooms", **args)
+run(text="Ketamine", **args)
+run(text="Mescaline", **args)
+run(text="Salvia Divinorum", **args)
+run(text="DMT", **args)
+run(text="2-CB", **args)
+run(text="MDMA", **args)
+run(text="Ecstacy", **args)
 
 
-run(text="A psychedelic experience on magic mushrooms")
-run(text="A psychedelic experience on LSD")
-run(text="A psychedelic experience on Mescaline")
-run(text="A psychedelic experience on Salvia Divinorum")
+run(text="A psychedelic experience on magic mushrooms", **args)
+run(text="A psychedelic experience on LSD", **args)
+run(text="A psychedelic experience on Mescaline", **args)
+run(text="A psychedelic experience on Salvia Divinorum", **args)
 
 
-run(text="LSD")
-run(text="Psychedelics")
-run(text="Trip")
-run(text="Psychedelic Trip")
+run(text="LSD", **args)
+run(text="Psychedelics", **args)
+run(text="Trip", **args)
+run(text="Psychedelic Trip", **args)
 
 
 quit()
