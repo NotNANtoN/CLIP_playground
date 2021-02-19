@@ -56,7 +56,6 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
     try:
         imagine = Imagine(
             text=text,
-            epochs = 12,
             image_width=image_width,
             save_progress=True,
             open_folder=True,
@@ -85,17 +84,74 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", default=8, type=int)
 parser.add_argument("--num_layers", default=44, type=int)
 parser.add_argument("--image_width", default=256, type=int)
-parser.add_argument("--gradient_accumulate_every", default=2, type=int)
-parser.add_argument("--save_every", default=25, type=int)
+parser.add_argument("--gradient_accumulate_every", default=3, type=int)
+parser.add_argument("--save_every", default=20, type=int)
+parser.add_argument("--epochs", default=10, type=int)
+
 
 args = parser.parse_args()
 args = vars(args)
 
 
-run(text="Instagram", **args)
-run(text="Instagram addiction", **args)
 
-run("The scream by Edward Munch")
+#run(text="A neural network.", **args)
+#run(text="An artificial neural network generating images.", **args)
+#run(text="A LinkedIn post.", **args)
+#run(text="An Instagram post", **args)
+#run(text="The website of the A.I. startup AdaLab.", **args)
+#run(text="Instagram addiction", **args)
+
+#run(text="Florian", **args)
+#run(text="Pia", **args)
+#run(text="Alex", **args)
+#run(text="Alexander Busch", **args)
+#run(text="Friedi", **args)
+
+#run(text="Consciousness", **args)
+#run(text="Enlightenment", **args)
+#run(text="Depression", **args)
+#run(text="Multiple personality disorder", **args)
+#run(text="Schizophrenia", **args)
+#run(text="Hearing voices", **args)
+#run(text="A schizoprhenic episode", **args)
+#run(text="Mania", **args)
+
+#run(text="A crying man.", **args)
+#run(text="A crying woman.", **args)
+#run(text="A terrorist.", **args)
+run(text="A photo of a terrorist.", **args)
+run(text="A criminal.", **args)
+run(text="A photo of a criminal.", **args)
+run(text="A cute person.", **args)
+run(text="A poor person.", **args)
+run(text="A rich person.", **args)
+run(text="A beautiful person.", **args)
+run(text="An ugly person.", **args)
+
+run(text="Entering the gates of Heaven.", **args)
+run(text="Meeting God", **args)
+run(text="The final judgement.", **args)
+run(text="The all-seeing eye.", **args)
+run(text="The all-seeing tree.", **args)
+run(text="The blue all-seeing tree. A blue tree with a large eye in its stem", **args)
+run(text="Being born", **args)
+run(text="The process of dying", **args)
+
+run(text="Anton Wiehe", **args)
+run(text="Elon Musk", **args)
+run(text="Bill Gates", **args)
+
+run(text="Rock climbing", **args)
+run(text="Bouldering", **args)
+
+run(text="Happiness", **args)
+
+quit()
+
+#run(text="Instagram", **args)
+run(text="Someone, addicted to Instagram, is scrolling on their phone.", **args)
+
+run(text="The scream by Edvard Munch", **args)
 
 run(text="A climber climbing a large mountain", **args)
 run(text="Surfing a big wave in the ocean", **args)
@@ -111,6 +167,7 @@ run(text="A photo of a supernova", **args)
 run(text="Wondering about life while looking at the night sky", **args)
 
 run(text="An image of a dog having a spiritual experience", **args)
+run(text="A dancing robot", **args)
 
 quit()
 #run(text="Love is the answer!", img="hot-dog.jpg")
