@@ -93,7 +93,28 @@ args = parser.parse_args()
 args = vars(args)
 
 
+def run_from_file(path, args):
+    with open(path, 'r') as f:
+        data = f.read()
+    texts = data.split("\n")
+    # restrict length and filter empty
+    texts = [text[:77] for text in texts if len(text) > 0]
+    # filter comments
+    texts = [text for text in texts if text[0] != "#"]
+    
+    for text in texts:
+        run(text=text, **args)
+    
 
+
+
+run_from_file("dreams_male_college.txt", args)
+
+run_from_file("dreams_female_college.txt", args)
+
+
+
+quit()
 #run(text="A neural network.", **args)
 #run(text="An artificial neural network generating images.", **args)
 #run(text="A LinkedIn post.", **args)
