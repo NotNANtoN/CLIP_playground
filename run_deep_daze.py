@@ -3,16 +3,19 @@ import time
 import os
 import subprocess
 import json
+import sys
 
 import torch
 
 #from deep_daze_repo.deep_daze.deep_daze import Imagine
-from deep_daze import Imagine
+#from deep_daze import Imagine
+sys.path.append("../deepdaze/")
+from deep_daze_repo.deep_daze.deep_daze import Imagine
 
 
 def create_text_path(text=None, img=None, encoding=None):
     if text is not None:
-        input_name = text.replace(" ", "_")
+        input_name = text.replace(" ", "_")[:77]
     elif img is not None:
         if isinstance(img, str):
             input_name = "".join(img.replace(" ", "_").split(".")[:-1])
@@ -24,20 +27,9 @@ def create_text_path(text=None, img=None, encoding=None):
 
 
 def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
-    input_name = ""
-    if name is not None:
-        input_name += name
-    if text is not None:
-        input_name += text.replace(" ", "_")
-    if img is not None:
-        if isinstance(img, str):
-            input_name += "_" + "".join(img.replace(" ", "_").split(".")[:-1])
-        else:
-            input_name += "_PIL_img"
-    if input_name == "":
-        input_name += "your_encoding"
+    input_name = create_text_path(text=text, img=img, encoding=encoding)
     
-    
+    # switch to own folder
     original_dir = os.getcwd()
     time_str = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
     name = os.path.join("deepdaze", str(image_width), time_str + "_" + input_name)
@@ -54,12 +46,14 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         json.dump(args, f)
 
     try:
+        if args["create_story"]:
+            args["iterations"] = 2100
         imagine = Imagine(
             text=text,
             image_width=image_width,
             save_progress=True,
-            open_folder=True,
             start_image_train_iters=200,
+            open_folder=False,
             **args
            )
         # set goal
@@ -72,7 +66,7 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         # train
         imagine()
         # make mp4
-        subprocess.run(["ffmpeg", "-i", input_name + ".000%03d.png", "-pix_fmt", "yuv420p", input_name + ".mp4"])
+        subprocess.run(["ffmpeg", "-i", '"' + input_name + ".000%03d.png" + '"', "-pix_fmt", "yuv420p", input_name + ".mp4"])
         # save
         torch.save(imagine.cpu(), "model.pt")
         del imagine
@@ -81,24 +75,40 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         os.chdir(original_dir)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", default=8, type=int)
+parser.add_argument("--batch_size", default=32, type=int)
 parser.add_argument("--num_layers", default=44, type=int)
 parser.add_argument("--image_width", default=256, type=int)
-parser.add_argument("--gradient_accumulate_every", default=3, type=int)
+parser.add_argument("--gradient_accumulate_every", default=1, type=int)
 parser.add_argument("--save_every", default=20, type=int)
 parser.add_argument("--epochs", default=10, type=int)
 
+# for 512: 
+    # bs==1,  num_layers==24 - CRASH
+    # bs==1,  num_layers==22 - 7.96 GB
+    # bs==2,  num_layers==20 - 7.5 GB
+    # bs==16, num_layers==16 - 6.5 GB
+    # bs==32, num_layers==16 - CRASH
+
+# default grad_acc==3
+# for 256:
+    # bs==8, num_layers==48 - 5.3 GB
+    # bs==16, num_layers==48 - 5.46 GB - 2.0 it/s
+    # bs==32, num_layers==48 - 5.92 GB - 1.67 it/s
+    # bs==8, num_layers==44 - 5 GB - 2.39 it/s
+    # bs==32, num_layers==44, grad_acc==1 - 5.62 GB - 4.83 it/s
+    # bs==96, num_layers==44, grad_acc==1 - 7.51 GB - 2.77 it/s
+    # bs==32, num_layers==66, grad_acc==1 - 7.09 GB - 3.7 it/s
 
 args = parser.parse_args()
 args = vars(args)
 
 
-def run_from_file(path, args):
+def run_from_file(path, **args):
     with open(path, 'r') as f:
         data = f.read()
     texts = data.split("\n")
-    # restrict length and filter empty
-    texts = [text[:77] for text in texts if len(text) > 0]
+    # filter empty
+    texts = [text for text in texts if len(text) > 0]
     # filter comments
     texts = [text for text in texts if text[0] != "#"]
     
@@ -108,9 +118,9 @@ def run_from_file(path, args):
 
 
 
-run_from_file("dreams_male_college.txt", args)
+run_from_file("dreams_male_college.txt", create_story= True, **args)
 
-run_from_file("dreams_female_college.txt", args)
+run_from_file("dreams_female_college.txt", create_story=True, **args)
 
 
 
