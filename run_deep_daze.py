@@ -46,8 +46,8 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         json.dump(args, f)
 
     try:
-        if args["create_story"]:
-            args["iterations"] = 2100
+        #if args["create_story"]:
+        #    args["iterations"] = 2100
         imagine = Imagine(
             text=text,
             image_width=image_width,
@@ -82,7 +82,9 @@ parser.add_argument("--num_layers", default=44, type=int)
 parser.add_argument("--image_width", default=256, type=int)
 parser.add_argument("--gradient_accumulate_every", default=1, type=int)
 parser.add_argument("--save_every", default=20, type=int)
-parser.add_argument("--epochs", default=10, type=int)
+parser.add_argument("--epochs", default=5, type=int)
+parser.add_argument("--story_start_words", default=5, type=int)
+parser.add_argument("--story_words_per_epoch", default=5, type=int)
 
 # for 512: 
     # bs==1,  num_layers==24 - CRASH
@@ -119,6 +121,8 @@ def run_from_file(path, **args):
     
 
 
+
+run(text="LSD", **args)
 
 run_from_file("dreams_male_college.txt", create_story= True, **args)
 
