@@ -66,7 +66,9 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         # train
         imagine()
         # make mp4
-        subprocess.run(["ffmpeg", "-i", '"' + input_name + ".000%03d.png" + '"', "-pix_fmt", "yuv420p", '"' + input_name + ".mp4" + '"'])
+        file_names = '"' + input_name + ".000%03d.png" + '"'
+        movie_name = '"' + input_name + ".mp4" + '"'
+        subprocess.run(" ".join(["ffmpeg", "-i", file_names, "-pix_fmt", "yuv420p", movie_name]), shell=True)
         # save
         torch.save(imagine.cpu(), "model.pt")
         del imagine
