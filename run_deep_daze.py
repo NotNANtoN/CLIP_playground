@@ -125,6 +125,25 @@ run_from_file("dreams_male_college.txt", create_story= True, **args)
 run_from_file("dreams_female_college.txt", create_story=True, **args)
 
 
+quit()
+
+# some favourites
+run(text="Consciousness", **args)
+run(text="Enlightenment", **args)
+run(text="Depression", **args)
+run(text="Multiple personality disorder", **args)
+run(text="Schizophrenia", **args)
+
+run(text="The all-seeing eye.", **args)
+run(text="The all-seeing tree.", **args)
+run(text="The blue all-seeing tree. A blue tree with a large eye in its stem", **args)
+run(text="Being born", **args)
+run(text="The process of dying", **args)
+
+run(text="A psychedelic experience on magic mushrooms", **args)
+run(text="A psychedelic experience on LSD", **args)
+run(text="A psychedelic experience on Mescaline", **args)
+run(text="A psychedelic experience on Salvia Divinorum", **args)
 
 quit()
 #run(text="A neural network.", **args)
