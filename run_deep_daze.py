@@ -8,9 +8,9 @@ import sys
 import torch
 
 #from deep_daze_repo.deep_daze.deep_daze import Imagine
-#from deep_daze import Imagine
-sys.path.append("../deepdaze/")
-from deep_daze_repo.deep_daze.deep_daze import Imagine
+from deep_daze import Imagine
+#sys.path.append("../deepdaze/")
+#from deep_daze_repo.deep_daze.deep_daze import Imagine
 
 
 def create_text_path(text=None, img=None, encoding=None):
@@ -83,8 +83,8 @@ parser.add_argument("--image_width", default=256, type=int)
 parser.add_argument("--gradient_accumulate_every", default=1, type=int)
 parser.add_argument("--save_every", default=20, type=int)
 parser.add_argument("--epochs", default=5, type=int)
-parser.add_argument("--story_start_words", default=5, type=int)
-parser.add_argument("--story_words_per_epoch", default=5, type=int)
+#parser.add_argument("--story_start_words", default=5, type=int)
+#parser.add_argument("--story_words_per_epoch", default=5, type=int)
 
 # for 512: 
     # bs==1,  num_layers==24 - CRASH
@@ -120,12 +120,19 @@ def run_from_file(path, **args):
         run(text=text, **args)
     
 
-
-
-run(text="LSD", **args)
+run(text="Adam Ondra climbing", **args)
+run(text="A climber climbing a big mountain", **args)
+run(text="Rock climbing", **args)
+run(text="Bouldering", **args)
+run(text="Happiness", **args)
+run(text="Being born", **args)
+run(text="The process of dying", **args)
+run(text="Life", **args)
+run(text="Death", **args)
+run(text="Meditation", **args)
+#run(text="LSD", **args)
 
 run_from_file("dreams_male_college.txt", create_story= True, **args)
-
 run_from_file("dreams_female_college.txt", create_story=True, **args)
 
 
