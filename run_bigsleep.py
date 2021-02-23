@@ -28,7 +28,7 @@ class Runner:
 
                 save_progress=True,
                 save_best=True,
-                save_every = 25
+                save_every = 25,
                 **args
                )
         dream()
