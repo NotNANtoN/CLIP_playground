@@ -1,5 +1,9 @@
+# files
+*.mp4
+
 # folders
 deepdaze/
+titan/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
