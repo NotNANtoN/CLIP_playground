@@ -18,7 +18,8 @@ def create_text_path(text=None, img=None, encoding=None):
         input_name = text.replace(" ", "_")[:77]
     elif img is not None:
         if isinstance(img, str):
-            input_name = "".join(img.replace(" ", "_").split(".")[:-1])
+            input_name = "".join(img.replace(" ", "_").split(".")[:-1]) # replace spaces by underscores, remove img extension
+            input_name = input_name.split("/")[-1]  # only take img name, not path
         else:
             input_name = "PIL_img"
     else:

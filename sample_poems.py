@@ -16,18 +16,18 @@ idcs = np.random.randint(0, len(df), sample_num)
 
 sample_poems = df.iloc[idcs]["Content"]
 
-name_prefix = f"poems_{sample_num}"
+name_prefix = f"poems_{sample_num}_"
 
 os.makedirs("poems", exist_ok=True)
 
 previous_samples = os.listdir("poems")
-previous_samples = [f[len(name_prefix):-len(".csv")] for f in previous_samples if f.startswith(name_prefix) and f.endswith(".csv")]
+previous_samples = [f[len(name_prefix):-len(".txt")] for f in previous_samples if f.startswith(name_prefix) and f.endswith(".txt")]
 previous_nums = [int(f) for f in previous_samples]
 max_num = max(previous_nums) if len(previous_nums) > 0 else -1
 
 current_num = max_num + 1
 
-name = f"{name_prefix}_{current_num}.csv"
+name = f"{name_prefix}{current_num}.txt"
 path = os.path.join("poems", name)
 
 
