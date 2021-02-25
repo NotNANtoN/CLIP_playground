@@ -27,6 +27,12 @@ def create_text_path(text=None, img=None, encoding=None):
 
 
 def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
+    if img is not None and isinstance(img, str):
+        pass
+        #img = img.replace("(", "\(")
+        #img = img.replace(")", "\)")
+        #img = '"' + img + '"'
+
     input_name = create_text_path(text=text, img=img, encoding=encoding)
     
     # switch to own folder
@@ -38,8 +44,14 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
     args = dict(args)
     if "start_image_path" in args:
         subprocess.run(["cp", args["start_image_path"], name])
+    # copy image for feature extraction to folder
     if img is not None and isinstance(img, str):
-        subprocess.run(["cp", img, name])
+        img_new_name = img.split("/")[-1] # only take end path
+        remove_list = [")", "(", "[", "]", '"', "'"]
+        for char in remove_list:
+            img_new_name = img_new_name.replace(char, "")
+        subprocess.run(["cp", img, os.path.join(name, img_new_name)])
+        img = img_new_name
     os.chdir(name)
     # save hyperparams:
     with open("hyperparams.json", "w+") as f:
@@ -50,6 +62,9 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         #    args["iterations"] = 2100
         imagine = Imagine(
             text=text,
+            img=img,
+            clip_encoding=encoding,
+
             image_width=image_width,
             save_progress=True,
             start_image_train_iters=200,
@@ -122,7 +137,7 @@ def run_from_file(path, **args):
 
 
 
-
+run(img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", **args)
 run(text="Basking in sunlight.", **args)
 run(text="Beauty of life.", **args)
 run(text="Marvellous. Glamorous. Beautiful.", **args)
