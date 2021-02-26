@@ -18,7 +18,8 @@ def create_text_path(text=None, img=None, encoding=None):
         input_name = text.replace(" ", "_")[:77]
     elif img is not None:
         if isinstance(img, str):
-            input_name = "".join(img.replace(" ", "_").split(".")[:-1])
+            input_name = "".join(img.replace(" ", "_").split(".")[:-1]) # replace spaces by underscores, remove img extension
+            input_name = input_name.split("/")[-1]  # only take img name, not path
         else:
             input_name = "PIL_img"
     else:
@@ -27,6 +28,12 @@ def create_text_path(text=None, img=None, encoding=None):
 
 
 def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
+    if img is not None and isinstance(img, str):
+        pass
+        #img = img.replace("(", "\(")
+        #img = img.replace(")", "\)")
+        #img = '"' + img + '"'
+
     input_name = create_text_path(text=text, img=img, encoding=encoding)
     
     # switch to own folder
@@ -38,8 +45,14 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
     args = dict(args)
     if "start_image_path" in args:
         subprocess.run(["cp", args["start_image_path"], name])
+    # copy image for feature extraction to folder
     if img is not None and isinstance(img, str):
-        subprocess.run(["cp", img, name])
+        img_new_name = img.split("/")[-1] # only take end path
+        remove_list = [")", "(", "[", "]", '"', "'"]
+        for char in remove_list:
+            img_new_name = img_new_name.replace(char, "")
+        subprocess.run(["cp", img, os.path.join(name, img_new_name)])
+        img = img_new_name
     os.chdir(name)
     # save hyperparams:
     with open("hyperparams.json", "w+") as f:
@@ -50,6 +63,9 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         #    args["iterations"] = 2100
         imagine = Imagine(
             text=text,
+            img=img,
+            clip_encoding=encoding,
+
             image_width=image_width,
             save_progress=True,
             start_image_train_iters=200,
@@ -66,7 +82,7 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         # train
         imagine()
         # make mp4
-        file_names = '"' + input_name + ".000%03d.png" + '"'
+        file_names = '"' + input_name + ".000%03d.jpg" + '"'
         movie_name = '"' + input_name + ".mp4" + '"'
         subprocess.run(" ".join(["ffmpeg", "-i", file_names, "-pix_fmt", "yuv420p", movie_name]), shell=True)
         # save
@@ -82,9 +98,9 @@ parser.add_argument("--num_layers", default=44, type=int)
 parser.add_argument("--image_width", default=256, type=int)
 parser.add_argument("--gradient_accumulate_every", default=1, type=int)
 parser.add_argument("--save_every", default=20, type=int)
-parser.add_argument("--epochs", default=5, type=int)
-#parser.add_argument("--story_start_words", default=5, type=int)
-#parser.add_argument("--story_words_per_epoch", default=5, type=int)
+parser.add_argument("--epochs", default=8, type=int)
+parser.add_argument("--story_start_words", default=5, type=int)
+parser.add_argument("--story_words_per_epoch", default=5, type=int)
 
 # for 512: 
     # bs==1,  num_layers==24 - CRASH
@@ -135,6 +151,41 @@ run(text="Meditation", **args)
 run_from_file("dreams_male_college.txt", create_story= True, **args)
 run_from_file("dreams_female_college.txt", create_story=True, **args)
 
+
+run(img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", **args)
+run(text="Basking in sunlight.", **args)
+run(text="Beauty of life.", **args)
+run(text="Marvellous. Glamorous. Beautiful.", **args)
+run(text="Yoga.", **args)
+run(text="Meditative surfing on the crescent waves of the ocean.", **args)
+
+
+run_from_file("poems/poems_10_0.txt", create_story=True, **args)
+args["iterations"] = 500
+run_from_file("poems/poems_10_0.txt", create_story=True, **args)
+
+>>>>>>> 8c4adf4a72c9bf12d1a59212481a3d3833d3c13c
+
+quit()
+run(text="A wizard painting a completely red image.", **args)
+run(text="Schizophrenia!", **args)
+run(text="Depression.", **args)
+run(text="Sadness.", **args)
+run(text="The most beautiful painting.", **args)
+run(text="The most ugly painting.", **args)
+
+
+run(text="Mist over green hills", **args)
+run(text="Shattered plates on the grass", **args)
+run(text="Cosmic love and attention", **args)
+run(text="A time traveler in the crowd.", **args)
+run(text="Life during the plague.", **args)
+run(text="Meditative peace in a sunlit forest.", **args)
+
+
+args["iterations"] = 500
+run_from_file("dreams_female_college.txt", create_story=True, **args)
+run_from_file("dreams_male_college.txt", create_story=True, **args)
 
 quit()
 

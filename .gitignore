@@ -1,6 +1,10 @@
+# files
+*.mp4
+
 # folders
 bigsleep/
 deepdaze/
+titan/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
