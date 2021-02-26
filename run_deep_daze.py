@@ -136,6 +136,37 @@ def run_from_file(path, **args):
         run(text=text, **args)
     
 
+
+
+args["lower_bound_cutout"] = 0.1
+run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args) 
+args["lower_bound_cutout"] = 0.5
+run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
+args["lower_bound_cutout"] = 0.6
+run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
+args["lower_bound_cutout"] = 0.1
+args["saturate_bound"] = True
+run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
+args["lower_bound_cutout"] = 0.5
+args["saturate_bound"] = True
+run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
+args["lower_bound_cutout"] = 0.6
+args["saturate_bound"] = True
+run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
+
+
+args["lower_bound_cutout"] = 0.1
+args["saturate_bound"] = False
+run_from_file("poems/best_poems.txt", create_story=True, **args)
+args["lower_bound_cutout"] = 0.5
+args["saturate_bound"] = False
+run_from_file("poems/best_poems.txt", create_story=True, **args)
+args["lower_bound_cutout"] = 0.1
+args["saturate_bound"] = True
+run_from_file("poems/best_poems.txt", create_story=True, **args)
+
+quit()
+
 run(text="Adam Ondra climbing", **args)
 run(text="A climber climbing a big mountain", **args)
 run(text="Rock climbing", **args)
