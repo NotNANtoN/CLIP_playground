@@ -34,7 +34,7 @@ class Runner:
         dream()
         
         name = text.replace(" ", "_")
-        file_names = '"' + name + ".000%03d.png" + '"'
+        file_names = '"' + name + ".%d.png" + '"'
         movie_name = '"' + name + ".mp4" + '"'
         subprocess.run(" ".join(["ffmpeg", "-i", file_names, "-pix_fmt", "yuv420p", movie_name]), shell=True)
 
