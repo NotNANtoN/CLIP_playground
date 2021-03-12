@@ -7,10 +7,11 @@ import sys
 
 import torch
 
-#from deep_daze_repo.deep_daze.deep_daze import Imagine
+#from eep_daze_repo.deep_daze.deep_daze import Imagine
+#frgs)
 from deep_daze import Imagine
-#sys.path.append("../deepdaze/")
-#from deep_daze_repo.deep_daze.deep_daze import Imagine
+sys.path.append("../deepdaze/")
+from deep_daze_repo.deep_daze.deep_daze import Imagine
 
 
 def create_text_path(text=None, img=None, encoding=None):
@@ -26,8 +27,16 @@ def create_text_path(text=None, img=None, encoding=None):
         input_name = "your_encoding"
     return input_name
 
+import copy
 
-def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
+
+def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
+    if args is None:
+        args = {}
+    args = copy.copy(args)
+    for key in kwargs:
+        args[key] = kwargs[key]
+    
     if img is not None and isinstance(img, str):
         pass
         #img = img.replace("(", "\(")
@@ -39,6 +48,7 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
     # switch to own folder
     original_dir = os.getcwd()
     time_str = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
+    image_width = args["image_width"]
     name = os.path.join("deepdaze", str(image_width), time_str + "_" + input_name)
     os.makedirs(name, exist_ok=True)
     # copy start image to folder
@@ -66,7 +76,6 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
             img=img,
             clip_encoding=encoding,
 
-            image_width=image_width,
             save_progress=True,
             start_image_train_iters=200,
             open_folder=False,
@@ -86,6 +95,8 @@ def run(text=None, img=None, encoding=None, name=None, image_width=256, **args):
         movie_name = '"' + input_name + ".mp4" + '"'
         subprocess.run(" ".join(["ffmpeg", "-i", file_names, "-pix_fmt", "yuv420p", movie_name]), shell=True)
         # save
+        del imagine.perceptor
+        del imagine.model.perceptor
         torch.save(imagine.cpu(), "model.pt")
         del imagine
 
@@ -103,11 +114,9 @@ parser.add_argument("--story_start_words", default=5, type=int)
 parser.add_argument("--story_words_per_epoch", default=5, type=int)
 
 # for 512: 
-    # bs==1,  num_layers==24 - CRASH
     # bs==1,  num_layers==22 - 7.96 GB
     # bs==2,  num_layers==20 - 7.5 GB
     # bs==16, num_layers==16 - 6.5 GB
-    # bs==32, num_layers==16 - CRASH
 
 # default grad_acc==3
 # for 256:
@@ -134,26 +143,379 @@ def run_from_file(path, **args):
     
     for text in texts:
         run(text=text, **args)
-    
+
+args["batch_size"] = 32
+args["epochs"] = 4
+args["lower_bound_cutout"] = 0.01
+
+lama = "A llama wearing a scarf and glasses, reading a book in a cozy cafe."
+wizard = "A wizard in blue robes is painting a completely red image in a castle."
+consciousness = "Consciousness"
+
+bathtub_love = "I love you like a bathtub full of ice cream."
+bathtub = "A bathtub full of ice cream."
+
+prompt = lama
 
 
+args["center_bias"] = True
+args["center_focus"] = 1
+
+args["image_width"] = 512
+args["batch_size"] = 8
+args["num_layers"] = 20
+
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The ocean.", args=args)
+run(text="Magma.", args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+args["image_width"] = 256
+args["batch_size"] = 96
+args["num_layers"] = 44
+
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The ocean.", args=args)
+run(text="Magma.", args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+
+quit()
+
+
+run(text=bathtub, args=args, center_bias=True, center_focus=1, epochs=7)
+run(text=bathtub_love, args=args, center_bias=True, center_focus=1, epochs=7)
+
+run(text=bathtub, args=args, center_bias=True, center_focus=3, epochs=7)
+run(text=bathtub_love, args=args, center_bias=True, center_focus=3, epochs=7)
+
+run(text=bathtub, args=args, center_bias=True, center_focus=10, epochs=7)
+run(text=bathtub_love, args=args, center_bias=True, center_focus=10, epochs=7)
+
+run(text=bathtub, args=args, center_bias=True, center_focus=2, epochs=7, optimizer="DiffGrad")
+run(text=bathtub_love, args=args, center_bias=True, center_focus=2, epochs=7, optimizer="DiffGrad")
+
+run(text=bathtub, args=args, center_bias=True, center_focus=2, epochs=7, avg_feats=True)
+run(text=bathtub_love, args=args, center_bias=True, center_focus=2, epochs=7, avg_feats=True)
+
+quit()
+
+run(text=wizard, args=args, center_bias=True, center_focus=1, epochs=7)
+run(text=prompt, args=args, center_bias=True, center_focus=1, epochs=7, gauss_mean=1.0, gauss_std=0.2, gauss_sampling=True)
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, gauss_mean=0.8, gauss_std=0.2, gauss_sampling=True)
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, gauss_mean=0.6, gauss_std=0.2, gauss_sampling=True)
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, optimizer="Adam")
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, optimizer="DiffGrad")
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, do_occlusion=True)
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, avg_feats=True)
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, average_over_noise=True, noise_std=0.01, noise_n=3)
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, average_over_noise=True, noise_std=0.01, noise_n=3, gauss_mean=0.6, gauss_std=0.2)
+run(text=prompt, args=args, center_bias=True, center_focus=2, epochs=7, average_over_noise=True, noise_std=0.01, noise_n=3, gauss_mean=0.6, gauss_std=0.2, do_occlusion=True)
+
+
+
+# test resnets
+args["lr"] = 7e-6
+args["batch_size"] = 16
+
+run(text=prompt, args=args, model_name="RN50")
+run(text=prompt, args=args, model_name="RN101")
+run(text=prompt, args=args, model_name="RN50x4")
+
+quit()
+
+run(text=prompt, args=args)
+run(text=prompt, args=args, center_bias=True, center_focus=2)
+run(text=prompt, args=args, center_bias=True, center_focus=5)
+run(text=prompt, args=args, center_bias=True, center_focus=10, epochs=7)
+run(text=prompt, args=args, center_bias=True, center_focus=10, epochs=7, gauss_mean=0.6, gauss_std=0.2, gauss_sampling=True)
+run(text=prompt, args=args, center_bias=True, center_focus=10, epochs=7, optimizer="Adam")
+run(text=prompt, args=args, center_bias=True, center_focus=10, epochs=7, optimizer="DiffGrad")
+
+# test resnets
+args["lr"] = 7e-6
+args["batch_size"] = 16
+
+run(text=prompt, args=args, model_name="RN50")
+run(text=prompt, args=args, model_name="RN101")
+run(text=prompt, args=args, model_name="RN50x4")
+
+
+quit()
+
+# test ViT
+args["model_name"] = "ViT-B/32"
+args["batch_size"] = 96
+
+# test resnets
+args["lr"] = 7e-6
+args["batch_size"] = 16
+
+run(text=prompt, args=args, model_name="RN50")
+run(text=prompt, args=args, model_name="RN101")
+run(text=prompt, args=args, model_name="RN50x4")
+
+prompt = consciousness
+
+run(text=prompt, args=args, center_bias=True, center_focus=2)
+run(text=prompt, args=args, center_bias=True, center_focus=5)
+run(text=prompt, args=args, center_bias=True, center_focus=10)
+run(text=prompt, args=args, center_bias=True, gauss_mean=0.6, gauss_std=0.2, gauss_sampling=True)
+run(text=prompt, args=args, optimizer="DiffGrad")
+run(text=prompt, args=args, optimizer="Adam")
+run(text=prompt, args=args, optimizer="AdamP")
+
+
+
+
+quit()
+
+args["lr"] = 5e-6
+
+
+# test optimizers
+args["model_name"] = "ViT-B/32"
+
+args["optimizer"] = "DiffGrad"
+run(text="A wizard painting a completely red image.", **args)
+
+args["optimizer"] = "Adam"
+run(text="A wizard painting a completely red image.", **args)
+
+args["optimizer"] = "AdamP"
+run(text="A wizard painting a completely red image.", **args)
+
+
+# test Resnets
+args["optimizer"] = "AdamP"
+
+# LR too high??
+args["model_name"] = "RN50"
+run(text="A wizard painting a completely red image.", **args)
+
+args["model_name"] = "RN101"
+run(text="A wizard painting a completely red image.", **args)
+
+args["model_name"] = "RN50x4"
+run(text="A wizard painting a completely red image.", **args)
+
+
+
+
+
+
+
+quit()
+
+args["center_bias"] = True
+# uniform
+run(text=prompt, **args)
+# avg feats
+args["avg_feats"] = True
+run(text=prompt, **args)
+args["avg_feats"] = False
+# gauss size
+args["gauss_mean"] = 0.6
+args["gauss_std"] = 0.2
+run(text=prompt, **args)
+# occlude
+args["do_occlusion"] = True
+run(text=prompt, **args)
+
+quit()
+
+# lower lower_bound
+args["lower_bound_cutout"] = 0.01
+run(text=prompt, **args)
+args["lower_bound_cutout"] = 0.1
+
+# baseline, uniform sampling
+args["gauss_sampling"] = False
+args["gauss_mean"] = 0.6
+args["gauss_std"] = 0.2
+args["do_occlusion"] = False
+args["average_over_noise"] = False
+args["noise_std"] = 0.01
+args["noise_n"] = 3
+run(text=prompt, **args)
+# avg feats
+args["avg_feats"] = True
+run(text=prompt, **args)
+args["avg_feats"] = False
+
+# test noise averaging
+args["average_over_noise"] = True
+args["noise_std"] = 0.01
+args["noise_n"] = 3
+#run(text=prompt, **args)
+args["noise_std"] = 0.01
+args["noise_n"] = 10
+#run(text=prompt, **args)
+args["noise_std"] = 0.001
+args["noise_n"] = 5
+#run(text=prompt, **args)
+args["noise_std"] = 0.1
+args["noise_n"] = 5
+#run(text=prompt, **args)
+args["average_over_noise"] = False
+
+# test occlusion
+args["do_occlusion"] = True
+run(text=prompt, **args)
+args["average_over_noise"] = True
+#run(text=prompt, **args)
+args["average_over_noise"] = False
+args["gauss_sampling"] = True
+args["gauss_mean"] = 0.2
+args["gauss_std"] = 0.6
+run(text=prompt, **args)
+
+# test gauss sampling
+args["gauss_sampling"] = True
+args["gauss_mean"] = 0.2
+args["gauss_std"] = 0.2
+run(text=prompt, **args)
+args["gauss_mean"] = 0.4
+args["gauss_std"] = 0.2
+run(text=prompt, **args)
+args["gauss_mean"] = 0.6
+args["gauss_std"] = 0.2
+run(text=prompt, **args)
+args["gauss_mean"] = 0.8
+args["gauss_std"] = 0.2
+run(text=prompt, **args)
+args["gauss_mean"] = 0.2
+args["gauss_std"] = 0.1
+run(text=prompt, **args)
+args["gauss_mean"] = 0.4
+args["gauss_std"] = 0.1
+run(text=prompt, **args)
+args["gauss_mean"] = 0.6
+args["gauss_std"] = 0.1
+run(text=prompt, **args)
+args["gauss_mean"] = 0.8
+args["gauss_std"] = 0.1
+run(text=prompt, **args)
+args["gauss_sampling"] = False
+
+# all
+args["gauss_sampling"] = True
+args["gauss_mean"] = 0.6
+args["gauss_std"] = 0.2
+args["do_occlusion"] = True
+args["average_over_noise"] = False
+run(text=prompt, **args)
+# avg feats
+args["avg_feats"] = True
+run(text=prompt, **args)
+args["avg_feats"] = False
+# no occl
+args["gauss_sampling"] = True
+args["gauss_mean"] = 0.6
+args["gauss_std"] = 0.2
+args["do_occlusion"] = False
+args["average_over_noise"] = False
+run(text=prompt, **args)
+# avg feats
+args["avg_feats"] = True
+run(text=prompt, **args)
+args["avg_feats"] = False
+
+
+
+quit()
+
+args["lower_bound_cutout"] = 0.1
+args["upper_bound_cutout"] = 1.0
+args["do_occlusion"] = False
+
+
+args["lower_bound_cutout"] = 0.5
+args["avg_feats"] = False
+run(text="A wizard painting a completely red image.", **args)
+run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
+run(text="A man painting a completely red painting.", **args)
+run(text="Shattered plates on the grass.", **args)
+run(text="A demon.", **args)
+run(text="A psychedelic experience on LSD", **args)
+run(text="Schizophrenia", **args)
+run(text="Consciousness", **args)
+run(text="Depression", **args)
+run(text="Red", **args)
+run(text="A checkerboard pattern.", **args)
+run(text="A single, naked man walking on a straight, empty road by himself.", **args)
+run(text="An illustration of a cat.", **args)
+
+
+args["lower_bound_cutout"] = 0.5
+args["avg_feats"] = True
+run(text="A wizard painting a completely red image.", **args)
+run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
+run(text="A man painting a completely red painting.", **args)
+run(text="Shattered plates on the grass.", **args)
+run(text="A demon.", **args)
+run(text="A psychedelic experience on LSD", **args)
+run(text="Schizophrenia", **args)
+run(text="Consciousness", **args)
+run(text="Depression", **args)
+run(text="Red", **args)
+run(text="A checkerboard pattern.", **args)
+run(text="A single, naked man walking on a straight, empty road by himself.", **args)
+run(text="An illustration of a cat.", **args)
+
+quit()
+
+args["lower_bound_cutout"] = 0.2
+args["saturate_bound"] = False
+run_from_file("poems/best_poems.txt", create_story=True, **args)
+
+
+quit()
+
+args["epochs"] = 1
 
 args["lower_bound_cutout"] = 0.1
 run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args) 
 args["lower_bound_cutout"] = 0.5
 run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
-args["lower_bound_cutout"] = 0.6
-run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
 args["lower_bound_cutout"] = 0.1
 args["saturate_bound"] = True
 run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
 args["lower_bound_cutout"] = 0.5
 args["saturate_bound"] = True
 run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
-args["lower_bound_cutout"] = 0.6
-args["saturate_bound"] = True
-run(text="A llama wearing a scarf and glasses, reading a book in a cozy cafe.", **args)
 
+
+args["lower_bound_cutout"] = 0.1
+args["saturate_bound"] = True
+run(text="Mist over green hills", **args)
+run(text="Shattered plates on the grass", **args)
+run(text="Cosmic love and attention", **args)
+run(text="A time traveler in the crowd.", **args)
+run(text="Life during the plague.", **args)
+run(text="Meditative peace in a sunlit forest.", **args)
+run(text="A psychedelic experience on LSD", **args)
+
+args["lower_bound_cutout"] = 0.2
+args["saturate_bound"] = True
+run(text="Mist over green hills", **args)
+run(text="Shattered plates on the grass", **args)
+run(text="Cosmic love and attention", **args)
+run(text="A time traveler in the crowd.", **args)
+run(text="Life during the plague.", **args)
+run(text="Meditative peace in a sunlit forest.", **args)
+run(text="A psychedelic experience on LSD", **args)
+
+
+quit()
 
 args["lower_bound_cutout"] = 0.1
 args["saturate_bound"] = False
@@ -163,6 +525,8 @@ args["saturate_bound"] = False
 run_from_file("poems/best_poems.txt", create_story=True, **args)
 args["lower_bound_cutout"] = 0.1
 args["saturate_bound"] = True
+
+
 run_from_file("poems/best_poems.txt", create_story=True, **args)
 
 quit()
@@ -195,7 +559,6 @@ run_from_file("poems/poems_10_0.txt", create_story=True, **args)
 args["iterations"] = 500
 run_from_file("poems/poems_10_0.txt", create_story=True, **args)
 
->>>>>>> 8c4adf4a72c9bf12d1a59212481a3d3833d3c13c
 
 quit()
 run(text="A wizard painting a completely red image.", **args)
@@ -212,7 +575,7 @@ run(text="Cosmic love and attention", **args)
 run(text="A time traveler in the crowd.", **args)
 run(text="Life during the plague.", **args)
 run(text="Meditative peace in a sunlit forest.", **args)
-
+run(text="A psychedelic experience on LSD", **args)
 
 args["iterations"] = 500
 run_from_file("dreams_female_college.txt", create_story=True, **args)
