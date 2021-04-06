@@ -17,8 +17,23 @@ def underscorify(text):
     return no_commas
 
 
+def create_text_path(text=None, img=None, encoding=None):
+    input_name = ""
+    if text is not None:
+        input_name += text
+    if img is not None:
+        if isinstance(img, str):
+            img_name = "".join(img.split(".")[:-1]) # replace spaces by underscores, remove img extension
+            img_name = img_name.split("/")[-1]  # only take img name, not path
+        else:
+            img_name = "PIL_img"
+        input_name += "_" + img_name
+    if encoding is not None:
+        input_name = "your_encoding"
+    return input_name.replace("-", "_").replace(",", "").replace(" ", "_").strip('-_')[:255]
 
-def run(self, text, args, img=None, **kwargs):
+
+def run(text, args, img=None, **kwargs):
     if args is None:
         args = {}
     args = copy.copy(args)
@@ -26,8 +41,7 @@ def run(self, text, args, img=None, **kwargs):
         args[key] = kwargs[key]
 
     orig_os = os.getcwd()
-    name = underscorify(name)
-
+    name = create_text_path(text=text, img=img)[:255]
     time_str = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
     folder_name = time_str + name
     folder_name = os.path.join("bigsleep", str(args["image_size"]), folder_name)
@@ -81,28 +95,111 @@ bathtub = "A bathtub full of ice cream."
 
 prompt = lama
 
+
+args["num_cutouts"] = 128
+run("A psychedelic experience on LSD", args=args)
+run(wizard, args=args)
+run(lama, args=args)
+run(consciousness, args=args)
+run("The sun setting spectaculously over the beautiful ocean.", args=args)
+run("A painting of a sunset.", args=args)
+run("A painting of a sunrise.", args=args)
+run("The logo of an A.I. startup named AdaLab", args=args)
+
+quit()
+
+
+args["num_cutouts"] = 16
+
 # try some stuff
-run(None, img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg")
-run("WARNING: This is just a test!", args=args, epochs=1)
+run("An image in high resolution.", args=args, img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg")
+run("High resolution. WARNING: This is just a test", args=args, epochs=1)
+run("High resolution.", args=args, img="base_images/hot-dog.jpg")
+run("High resolution.", args=args, img="base_images/ouzi.jpg")
+run(bathtub, args=args)
+run(bathtub + " High resolution.", args=args)
+run(bathtub + " A painting.", args=args)
+
+args["max_classes"] = 15
+run("High resolution.", args=args, img="base_images/ouzi.jpg")
+args["max_classes"] = None
+run("A painting.", args=args, img="base_images/ouzi.jpg")
+run("A painting of a dog.", args=args, img="base_images/ouzi.jpg")
+run("An illustration.", args=args, img="base_images/ouzi.jpg")
+run("A child's drawing.", args=args, img="base_images/ouzi.jpg")
+run("A painting of a psychedelic experience on LSD", args=args)
+run("A high-resolution photograph of a psychedelic experience on LSD", args=args)
 
 
-args["num_cutous"] = 4
+args["ema_decay"] = 0.0
+run("A psychedelic experience on LSD", args=args)
 run(wizard, args=args)
-run(consciousness, args=args)
-args["num_cutous"] = 8
-run(consciousness, args=args)
+run(lama, args=args)
+args["ema_decay"] = 0.0001
+run("A psychedelic experience on LSD", args=args)
 run(wizard, args=args)
-args["num_cutous"] = 16
-run(consciousness, args=args)
+run(lama, args=args)
+args["ema_decay"] = 0.3
+run("A psychedelic experience on LSD", args=args)
 run(wizard, args=args)
-args["num_cutous"] = 32
-run(consciousness, args=args)
+run(lama, args=args)
+args["ema_decay"] = 0.6
+run("A psychedelic experience on LSD", args=args)
 run(wizard, args=args)
-args["num_cutous"] = 64
-run(consciousness, args=args)
+run(lama, args=args)
+args["ema_decay"] = 0.9
+run("A psychedelic experience on LSD", args=args)
 run(wizard, args=args)
-args["num_cutous"] = 128
+run(lama, args=args)
+args["ema_decay"] = 0.999
+run("A psychedelic experience on LSD", args=args)
+run(wizard, args=args)
+run(lama, args=args)
 
+
+args["experimental_resample"] = True
+run("A psychedelic experience on LSD", args=args)
+run(wizard, args=args)
+run(lama, args=args)
+run(consciousness, args=args)
+run("The sun setting spectaculously over the beautiful ocean.", args=args)
+run("A painting of a sunset.", args=args)
+run("A painting of a sunrise.", args=args)
+run("The logo of an A.I. startup named AdaLab", args=args)
+args["experimental_resample"] = False
+
+args["num_cutouts"] = 128
+run("A psychedelic experience on LSD", args=args)
+run(wizard, args=args)
+run(lama, args=args)
+run(consciousness, args=args)
+run("The sun setting spectaculously over the beautiful ocean.", args=args)
+run("A painting of a sunset.", args=args)
+run("A painting of a sunrise.", args=args)
+run("The logo of an A.I. startup named AdaLab", args=args)
+
+
+quit()
+
+
+"""
+args["num_cutouts"] = 4
+run(wizard, args=args)
+run(consciousness, args=args)
+args["num_cutouts"] = 8
+run(consciousness, args=args)
+run(wizard, args=args)
+args["num_cutouts"] = 16
+run(consciousness, args=args)
+run(wizard, args=args)
+args["num_cutouts"] = 32
+run(consciousness, args=args)
+run(wizard, args=args)
+args["num_cutouts"] = 64
+run(consciousness, args=args)
+run(wizard, args=args)
+args["num_cutouts"] = 128
+"""
 
 
 run("A psychedelic experience on LSD", args=args)
@@ -113,6 +210,18 @@ run("The sun setting spectaculously over the beautiful ocean.", args=args)
 run("A painting of a sunset.", args=args)
 run("A painting of a sunrise.", args=args)
 run("The logo of an A.I. startup named AdaLab", args=args)
+
+
+args["center_bias"] = True
+run("A psychedelic experience on LSD", args=args)
+run(wizard, args=args)
+run(lama, args=args)
+run(consciousness, args=args)
+run("The sun setting spectaculously over the beautiful ocean.", args=args)
+run("A painting of a sunset.", args=args)
+run("A painting of a sunrise.", args=args)
+run("The logo of an A.I. startup named AdaLab", args=args)
+args["center_bias"] = False
 
 
 args["max_classes"] = 15

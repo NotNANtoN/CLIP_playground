@@ -7,7 +7,7 @@ import sys
 
 import torch
 
-#from eep_daze_repo.deep_daze.deep_daze import Imagine
+#from deep_daze_repo.deep_daze.deep_daze import Imagine
 #frgs)
 from deep_daze import Imagine
 sys.path.append("../deepdaze/")
@@ -15,17 +15,19 @@ from deep_daze_repo.deep_daze.deep_daze import Imagine
 
 
 def create_text_path(text=None, img=None, encoding=None):
+    input_name = ""
     if text is not None:
-        input_name = text.replace(" ", "_")[:77]
-    elif img is not None:
+        input_name += text
+    if img is not None:
         if isinstance(img, str):
-            input_name = "".join(img.replace(" ", "_").split(".")[:-1]) # replace spaces by underscores, remove img extension
-            input_name = input_name.split("/")[-1]  # only take img name, not path
+            img_name = "".join(img.split(".")[:-1]) # replace spaces by underscores, remove img extension
+            img_name = img_name.split("/")[-1]  # only take img name, not path
         else:
-            input_name = "PIL_img"
-    else:
+            img_name = "PIL_img"
+        input_name += "_" + img_name
+    if encoding is not None:
         input_name = "your_encoding"
-    return input_name
+    return input_name.replace("-", "_").replace(",", "").replace(" ", "_").strip('-_')[:255]
 
 import copy
 
@@ -79,6 +81,7 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
             save_progress=True,
             start_image_train_iters=200,
             open_folder=False,
+            save_video=True,
             **args
            )
         # set goal
@@ -93,11 +96,11 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
         # make mp4
         file_names = '"' + input_name + ".000%03d.jpg" + '"'
         movie_name = '"' + input_name + ".mp4" + '"'
-        subprocess.run(" ".join(["ffmpeg", "-i", file_names, "-pix_fmt", "yuv420p", movie_name]), shell=True)
+        #subprocess.run(" ".join(["ffmpeg", "-i", file_names, "-pix_fmt", "yuv420p", movie_name]), shell=True)
         # save
         del imagine.perceptor
         del imagine.model.perceptor
-        torch.save(imagine.cpu(), "model.pt")
+        #torch.save(imagine.cpu(), "model.pt")
         del imagine
 
     finally:
@@ -156,6 +159,143 @@ bathtub_love = "I love you like a bathtub full of ice cream."
 bathtub = "A bathtub full of ice cream."
 
 prompt = lama
+
+args["num_layers"] = 32
+args["hidden_size"] = 512
+args["center_bias"] = 1
+args["center_focus"] = 1
+
+run(text="Manuela.", args=args)
+run(text="A woman is dancing Tango.", args=args)
+run(text="A woman named Manuela is dancing Tango Argentino.", args=args)
+run(text="A dog with the name Teddy.", args=args)
+run(text="A dog that looks like a teddy bear.", args=args)
+run(text="A woman named Manuela, dancing Tango with her dog Teddy.", args=args)
+run(text="Der Bodensee", args=args)
+
+run(text=bathtub, args=args)
+
+run(text="A girl named Emilie.", args=args)
+run(text="A dirty girl.", args=args)
+run(text="A dirty girl named Emilie.", args=args)
+run(text="A boy named Anton.", args=args)
+run(text="A shabby boy.", args=args)
+run(text="A shabby boy with the name Anton.", args=args)
+run(text="Anton", args=args)
+run(text="A shabby boy and a dirty girl having fun.", args=args)
+
+run(text="A woman named Lena.", args=args)
+run(text="A hipster nurse named Lena.", args=args)
+run(text="A blonde, sun-loving, hipster nurse named Lena is riding her racing bike.", args=args)
+run(text="A brown-haired, thin techno-nerd with glasses is riding his bike, called the dangerous rider.", args=args)
+run(text="A German-Thai, black-haired, data scientist woman painting some beautiful paintings.", args=args)
+run(text="A crazy red-haired girl, lying in her bed watching Vampire diaries with her dog all day long.", args=args)
+run(text="A wild brown-haired girl, chilling in her room, smoking joints and having fun.", args=args)
+run(text="Strobocop.", args=args)
+run(text="Orellius.", args=args)
+run(text="Antonenanenanenas.", args=args)
+
+quit()
+
+
+args["avg_feats"] = True
+args["averaging_weight"] = 0.2
+run(text=wizard, args=args)
+run(text=consciousness, args=args)
+run(text="Depression.", args=args)
+
+args["averaging_weight"] = 0.4
+run(text=wizard, args=args)
+run(text=consciousness, args=args)
+run(text="Depression.", args=args)
+
+args["averaging_weight"] = 0.6
+run(text=wizard, args=args)
+run(text=consciousness, args=args)
+run(text="Depression.", args=args)
+
+args["averaging_weight"] = 0.8
+run(text=wizard, args=args)
+run(text=consciousness, args=args)
+run(text="Depression.", args=args)
+args["averaging_weight"] = 1.0
+
+args["hidden_size"] = 256
+args["avg_feats"] = False
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+args["hidden_size"] = 512
+args["avg_feats"] = False
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+args["hidden_size"] = 256
+args["avg_feats"] = True
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+args["hidden_size"] = 512
+args["avg_feats"] = True
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+quit()
+
+args["hidden_size"] = 64
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+args["hidden_size"] = 128
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+args["hidden_size"] = 256
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+args["hidden_size"] = 512
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+run(text="The sun setting spectaculously over the beautiful ocean.", args=args)
+run(text="A painting of a sunset.", args=args)
+run(text="A painting of a sunrise.", args=args)
+
+
+
+
+quit()
+
+
 
 
 args["center_bias"] = True
