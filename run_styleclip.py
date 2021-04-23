@@ -5,8 +5,10 @@ import subprocess
 import json
 import sys
 import copy
+import shutil
 
 import torch
+import matplotlib.pyplot as plt
 
 sys.path.append("../StyleCLIP_modular")
 from style_clip import Imagine, create_text_path
@@ -19,7 +21,8 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
     for key in kwargs:
         args[key] = kwargs[key]
 
-    input_name = create_text_path(text=text, img=img, encoding=encoding, context_length=77)
+    img_name = img.split("/")[-1] if img is not None else None
+    input_name = create_text_path(text=text, img=img_name, encoding=encoding, context_length=77)
     
     # switch to own folder
     original_dir = os.getcwd()
@@ -33,36 +36,56 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
     # copy start image to folder
     args = dict(args)
     if "start_image_path" in args:
-        subprocess.run(["cp", args["start_image_path"], name])
+        shutil.copy(args["start_image_path"], name)
     # copy image for feature extraction to folder
     if img is not None and isinstance(img, str):
         img_new_name = img.split("/")[-1] # only take end path
         remove_list = [")", "(", "[", "]", '"', "'"]
         for char in remove_list:
             img_new_name = img_new_name.replace(char, "")
-        subprocess.run(["cp", img, os.path.join(name, img_new_name)])
+        shutil.copy(img, os.path.join(name, img_new_name))
         img = img_new_name
-    # save hyperparams:
-    with open("hyperparams.json", "w+") as f:
-        json.dump(args, f)
 
-    try:
+    try:        
         imagine = Imagine(
-            text=text,
-            img=img,
-            clip_encoding=encoding,
-
             save_progress=True,
-            start_image_train_iters=200,
             open_folder=False,
             save_video=True,
             **args
            )
         
+        # copy upfir2dn file from stylegan2 to new working directory
+        #upfir_path = "stylegan2/torch_utils/ops/" #upfirdn2d.cpp"
+        #upfir_new_path = os.path.join(name, upfir_path)
+        #os.makedirs(upfir_new_path, exist_ok=True)  #"/".join(upfir_new_path.split("/")[:-1]), exist_ok=True)
+        #shutil.copy(upfir_path + "upfirdn2d.cpp", os.path.join(name, upfir_path + "upfirdn2d.cpp"))
+        #shutil.copy(upfir_path + "upfirdn2d.cu", os.path.join(name, upfir_path + "upfirdn2d.cu"))
+
         os.chdir(name)
+        
+        imagine.set_clip_encoding(text=text,
+            img=img,
+            encoding=encoding,
+        )
+        
+        # save hyperparams:
+        with open("hyperparams.json", "w+") as f:
+            json.dump(args, f)
+       
+        sys.path.append("../../stylegan2")
+        sys.path.append("../../../stylegan2")
+        sys.path.append("../../../../stylegan2")
 
         # train
         imagine()
+        
+        # plot losses
+        plt.figure()
+        plt.plot(imagine.aug_losses, label="Augmented")
+        plt.plot(imagine.non_aug_losses, label="Raw")
+        plt.legend()
+        plt.savefig("loss_plot.png")
+        plt.clf()
        
         # save
         del imagine.perceptor
@@ -73,31 +96,21 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
     finally:
         os.chdir(original_dir)
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", default=32, type=int)
-parser.add_argument("--image_width", default=256, type=int)
 parser.add_argument("--gradient_accumulate_every", default=1, type=int)
-parser.add_argument("--save_every", default=10, type=int)
+parser.add_argument("--save_every", default=1, type=int)
 parser.add_argument("--epochs", default=1, type=int)
 parser.add_argument("--story_start_words", default=5, type=int)
 parser.add_argument("--story_words_per_epoch", default=5, type=int)
 parser.add_argument("--style", default="../stylegan2-ada-pytorch/VisionaryArt.pkl", type=str, choices=["faces (ffhq config-f)", "../stylegan2-ada-pytorch/VisionaryArt.pkl"])
+parser.add_argument("--lr_schedule", default=0, type=int)
+parser.add_argument("--start_image_steps", default=1000, type=int)
+parser.add_argument("--iterations", default=100, type=int)
 
 
-# for 512: 
-    # bs==1,  num_layers==22 - 7.96 GB
-    # bs==2,  num_layers==20 - 7.5 GB
-    # bs==16, num_layers==16 - 6.5 GB
-
-# default grad_acc==3
-# for 256:
-    # bs==8, num_layers==48 - 5.3 GB
-    # bs==16, num_layers==48 - 5.46 GB - 2.0 it/s
-    # bs==32, num_layers==48 - 5.92 GB - 1.67 it/s
-    # bs==8, num_layers==44 - 5 GB - 2.39 it/s
-    # bs==32, num_layers==44, grad_acc==1 - 5.62 GB - 4.83 it/s
-    # bs==96, num_layers==44, grad_acc==1 - 7.51 GB - 2.77 it/s
-    # bs==32, num_layers==66, grad_acc==1 - 7.09 GB - 3.7 it/s
+#parser.add_argument("--seed")
 
 args = parser.parse_args()
 args = vars(args)
@@ -115,21 +128,663 @@ def run_from_file(path, **args):
     for text in texts:
         run(text=text, **args)
 
-args["batch_size"] = 128
-args["epochs"] = 1
-args["lower_bound_cutout"] = 0.01
+
+args["lower_bound_cutout"] = 0.05
 
 lama = "A llama wearing a scarf and glasses, reading a book in a cozy cafe."
 wizard = "A wizard in blue robes is painting a completely red image in a castle."
 consciousness = "Consciousness"
-
 bathtub_love = "I love you like a bathtub full of ice cream."
 bathtub = "A bathtub full of ice cream."
-
 prompt = lama
 
-
+# choose style
 #args["style"] = "../lucid-sonic-dreams/faces (ffhq config-f).pkl"
+#args["style"] = "../stylegan2-ada-pytorch/logos_17040.pkl"
+#args["style"] = "../stylegan2-ada-pytorch/madziowa_p_800.pkl"
+#args["style"] = "../stylegan2-ada-pytorch/jan_regnart_640.pkl"
+args["style"] = "../stylegan2-ada-pytorch/astromaniacmag_160.pkl"
+
+args["start_img_loss_weight"] = 0.5
+
+
+args["opt_all_layers"] = 1
+args["lr_schedule"] = 1
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+args["seed"] = 1
+
+# Exps:
+
+args["start_image_steps"] = 1000
+
+args["batch_size"] = 32
+
+
+args["iterations"] = 2000
+args["save_every"] = 4
+run(text="Consciousness", args=args)
+run(text="do unto others as you would have them do unto you", args=args)
+run(text="Looking back", args=args)
+run(text="Meditative peace in a sunlit forest.", args=args)
+run(text="Gödel, Escher, Bach", args=args)
+run(text="Supernova", args=args)
+run(text="Ecstacy", args=args)
+run(text="Boundless ego", args=args)
+run(text="Oceanic boundlessness", args=args)
+run(text="Home", args=args)
+run(text="Wanderlust", args=args)
+
+args["style"] = "../stylegan2-ada-pytorch/madziowa_p_800.pkl"
+run(text="Consciousness", args=args)
+run(text="do unto others as you would have them do unto you.", args=args)
+run(text="Looking back", args=args)
+run(text="Meditative peace in a sunlit forest.", args=args)
+run(text="Gödel, Escher, Bach", args=args)
+run(text="Supernova", args=args)
+run(text="Ecstacy", args=args)
+run(text="Boundless ego", args=args)
+run(text="Oceanic boundlessness", args=args)
+run(text="Home", args=args)
+run(text="Wanderlust", args=args)
+
+
+quit()
+
+
+run(start_image_path="base_images/anton_climb.jpg", text="A picture of a happy man.", args=args)
+
+
+run(text="A black hole", args=args)
+run(text="A picture of a black hole", args=args)
+run(text="A supernova", args=args)
+run(text="A quasar", args=args)
+run(text="A picture of a friendly old man", args=args)
+run(text="Consciousness", args=args)
+run(text="Depression", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="A sunflower", args=args)
+
+
+
+args["iterations"] = 1000
+
+run(text="A black hole", args=args)
+run(text="A picture of a black hole", args=args)
+run(text="A supernova", args=args)
+run(text="A quasar", args=args)
+run(text="A picture of a friendly old man", args=args)
+run(text="Consciousness", args=args)
+run(text="Depression", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="A sunflower", args=args)
+
+quit()
+
+run(start_image_path="base_images/anton_climb.jpg", text="A picture of a happy man.", args=args)
+
+args["norm_weight"] = 0.1
+run(start_image_path="base_images/anton_climb.jpg", text="A picture of a sad man.", args=args)
+
+args["norm_weight"] = 1.0
+run(start_image_path="base_images/anton_climb.jpg", text="A picture of a sad man.", args=args)
+
+args["norm_weight"] = 5.0
+run(start_image_path="base_images/anton_climb.jpg", text="A picture of a sad man.", args=args)
+
+
+quit()
+
+
+args["opt_all_layers"] = 0
+args["noise_opt"] = 1
+run(start_image_path="base_images/anton_climb.jpg", text="Mad man.", args=args)
+
+args["opt_all_layers"] = 0
+args["noise_opt"] = 1
+args["reg_noise"] = 1
+run(start_image_path="base_images/anton_climb.jpg", text="Mad man.", args=args)
+
+args["opt_all_layers"] = 0
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+run(start_image_path="base_images/anton_climb.jpg", text="Mad man.", args=args)
+
+args["opt_all_layers"] = 1
+args["norm_weight"] = 0.2
+run(start_image_path="base_images/anton_climb.jpg", text="Mad man.", args=args)
+
+args["opt_all_layers"] = 1
+args["norm_weight"] = 0.8
+run(start_image_path="base_images/anton_climb.jpg", text="Mad man.", args=args)
+
+quit()
+
+run(text="A painting of a sunflower.", args=args)
+
+args["opt_all_layers"] = 0
+run(text="A painting of a sunflower.", args=args)
+
+args["noise_opt"] = 1
+run(text="A painting of a sunflower.", args=args)
+
+
+args["opt_all_layers"] = 1
+args["noise_opt"] = 0
+
+args["batch_size"] = 64
+run(start_image_path="base_images/anton_climb.jpg", text="Techno.", args=args)
+
+args["batch_size"] = 64
+run(start_image_path="base_images/anton_climb.jpg", text="Techno.", args=args)
+
+quit()
+
+args["batch_size"] = 64
+args["lr"] = 0.1
+run(text="Soft.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Techno.", args=args)
+
+
+args["batch_size"] = 32
+args["lr"] = 0.1
+run(text="Soft.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Techno.", args=args)
+
+args["norm_weight"] = 0.1
+run(text="Soft.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Techno.", args=args)
+
+args["norm_weight"] = 0.2
+run(text="Soft.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Techno.", args=args)
+
+args["norm_weight"] = 0.5
+run(text="Soft.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Techno.", args=args)
+
+args["norm_weight"] = 1.0
+run(text="Soft.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Techno.", args=args)
+
+
+
+
+quit()
+
+
+args["lr"] = 0.5
+run(text="Wild", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Wild.", args=args)
+
+args["lr"] = 0.2
+run(text="Wild", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Wild.", args=args)
+
+args["start_image_steps"] = 1000
+args["lr"] = 0.1
+run(start_image_path="base_images/anton_climb.jpg", text="Wild.", args=args)
+
+args["lr"] = 0.01
+run(start_image_path="base_images/anton_climb.jpg", text="Wild.", args=args)
+
+quit()
+
+args["lr"] = 0.1
+run(text="Classical", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Classical.", args=args)
+
+args["lr"] = 0.05
+run(text="Classical", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Classical.", args=args)
+
+args["lr"] = 0.02
+run(text="Classical", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Classical.", args=args)
+
+args["lr"] = 0.01
+run(text="Classical", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Classical.", args=args)
+
+args["lr"] = 0.005
+run(text="Classical", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Classical.", args=args)
+
+args["lr"] = 0.1
+args["lr_schedule"] = 1
+run(text="Classical", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Classical.", args=args)
+
+args["lr"] = 0.05
+args["lr_schedule"] = 1
+run(text="Classical", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Classical.", args=args)
+
+args["lr"] = 0.01
+args["lr_schedule"] = 1
+run(text="Classical", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Classical.", args=args)
+
+quit()
+
+args["opt_all_layers"] = 0
+args["lr_schedule"] = 0
+args["noise_opt"] = 1
+args["reg_noise"] = 1
+run(text="Hiphop", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a person with glasses.", args=args)
+
+args["opt_all_layers"] = 0
+args["lr_schedule"] = 1
+args["noise_opt"] = 1
+args["reg_noise"] = 1
+run(text="Hiphop", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a person with glasses.", args=args)
+
+args["opt_all_layers"] = 1
+args["lr_schedule"] = 1
+args["noise_opt"] = 1
+args["reg_noise"] = 1
+run(text="Hiphop", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a person with glasses.", args=args)
+
+args["start_image_steps"] = 1000
+args["opt_all_layers"] = 1
+args["lr_schedule"] = 1
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+run(text="Hiphop", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a person with glasses.", args=args)
+
+args["opt_all_layers"] = 1
+args["lr_schedule"] = 0
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+run(text="Hiphop", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a person with glasses.", args=args)
+
+quit()
+
+args["lr_schedule"] = 1
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+args["start_img_loss_weight"] = 0.25
+run(text="Slow. Dramatic.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a sad person.", args=args)
+
+args["lr_schedule"] = 1
+args["noise_opt"] = 1
+args["reg_noise"] = 0
+args["start_img_loss_weight"] = 0.25
+run(text="Slow. Dramatic.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a sad person.", args=args)
+
+args["opt_all_layers"] = 1
+args["lr_schedule"] = 1
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+args["start_img_loss_weight"] = 0.25
+run(text="Slow. Dramatic.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a sad person.", args=args)
+
+args["lr_schedule"] = 0
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+args["start_img_loss_weight"] = 0.25
+run(text="Slow. Dramatic.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a sad person.", args=args)
+
+args["lr_schedule"] = 0
+args["noise_opt"] = 1
+args["reg_noise"] = 0
+args["start_img_loss_weight"] = 0.25
+run(text="Slow. Dramatic.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a sad person.", args=args)
+
+args["opt_all_layers"] = 1
+args["lr_schedule"] = 0
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+args["start_img_loss_weight"] = 0.25
+run(text="Slow. Dramatic.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a sad person.", args=args)
+
+quit()
+
+args["opt_all_layers"] = 1
+args["noise_opt"] = 0
+args["lr_schedule"] = 0
+args["reg_noise"] = 0
+run(text="Fast. Happy.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+
+args["opt_all_layers"] = 0
+args["noise_opt"] = 0
+args["lr_schedule"] = 0
+args["reg_noise"] = 0
+run(text="Fast. Happy.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+
+args["opt_all_layers"] = 0
+args["noise_opt"] = 1
+args["lr_schedule"] = 1
+args["reg_noise"] = 0
+args["start_img_loss_weight"] = 0.01
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+args["start_img_loss_weight"] = 0.2
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+args["start_img_loss_weight"] = 0.5
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+args["start_img_loss_weight"] = 1.0
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+
+quit()
+
+
+args["noise_opt"] = 0
+args["lr_schedule"] = 0
+args["reg_noise"] = 0
+run(text="Fast. Happy.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+
+args["noise_opt"] = 0
+args["lr_schedule"] = 1
+args["reg_noise"] = 0
+run(text="Fast. Happy.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+
+args["lr_schedule"] = 0
+args["noise_opt"] = 1
+args["reg_noise"] = 0
+run(text="Fast. Happy.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+args["noise_opt"] = 1
+args["reg_noise"] = 1
+run(text="Fast. Happy.", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+
+
+quit()
+
+run(text="A charcoal drawing of a creepy face.", args=args)
+run(text="A wirey drawing of a creepy face.", args=args)
+run(text="A charcoal drawing of a cat", args=args)
+run(text="A drawing of a beautiful lady.", args=args)
+run(text="A drawing of a beautiful man.", args=args)
+run(text="Schizophrenia", args=args)
+run(text="Depression", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="A scary raven.", args=args)
+run(text="A pink cat.", args=args)
+
+
+run(text="Fast", args=args)
+run(text="Happy", args=args)
+run(text="Fast. Happy.", args=args)
+run(text="Slow.", args=args)
+run(text="Sad.", args=args)
+run(text="Vibrant.", args=args)
+run(text="Piano.", args=args)
+run(text="Violin.", args=args)
+
+args["style"] = "../stylegan2-ada-pytorch/jan_regnart_640.pkl"
+run(text="Fast", args=args)
+run(text="Happy", args=args)
+run(text="Fast. Happy.", args=args)
+run(text="Slow.", args=args)
+run(text="Sad.", args=args)
+run(text="Vibrant.", args=args)
+run(text="Piano.", args=args)
+run(text="Violin.", args=args)
+
+quit()
+
+
+
+args["seed"] = 1
+args["start_image_steps"] = 1000
+
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+args["lr_schedule"] = 0
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+args["noise_opt"] = 0
+args["reg_noise"] = 0
+args["lr_schedule"] = 1
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+args["noise_opt"] = 1
+args["reg_noise"] = 0
+args["lr_schedule"] = 0
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+args["noise_opt"] = 1
+args["reg_noise"] = 1
+args["lr_schedule"] = 0
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+args["noise_opt"] = 1
+args["reg_noise"] = 1
+args["lr_schedule"] = 1
+run(start_image_path="base_images/anton_climb.jpg", text="A photo of a weird person.", args=args)
+
+
+quit()
+
+run(start_image_path="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", text="Beauty", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Scary", args=args)
+run(img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", args=args)
+run(img="base_images/anton_climb.jpg", args=args)
+
+args["noise_opt"] = 1
+args["lr_schedule"] = 0
+run(start_image_path="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", text="Beauty", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Scary", args=args)
+run(img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", args=args)
+run(img="base_images/anton_climb.jpg", args=args)
+
+args["noise_opt"] = 0
+args["lr_schedule"] = 1
+run(start_image_path="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", text="Beauty", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Scary", args=args)
+run(img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", args=args)
+run(img="base_images/anton_climb.jpg", args=args)
+
+args["noise_opt"] = 1
+args["lr_schedule"] = 1
+run(start_image_path="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", text="Beauty", args=args)
+run(start_image_path="base_images/anton_climb.jpg", text="Scary", args=args)
+run(img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", args=args)
+run(img="base_images/anton_climb.jpg", args=args)
+
+
+args["noise_opt"] = 0
+args["lr_schedule"] = 0
+run(text="A charcoal drawing of a creepy face.", args=args)
+run(text="A wirey drawing of a creepy face.", args=args)
+run(text="A charcoal drawing of a cat", args=args)
+run(text="A drawing of a beautiful lady.", args=args)
+run(text="A drawing of a beautiful man.", args=args)
+run(text="Schizophrenia", args=args)
+run(text="Depression", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="A scary raven.", args=args)
+run(text="A pink cat.", args=args)
+
+
+args["style"] = "../stylegan2-ada-pytorch/jan_regnart_640.pkl"
+run(text="Fast", args=args)
+run(text="Happy", args=args)
+run(text="Fast. Happy.", args=args)
+run(text="Slow.", args=args)
+run(text="Sad.", args=args)
+run(text="Vibrant.", args=args)
+run(text="Piano.", args=args)
+run(text="Violin.", args=args)
+
+
+
+args["noise_opt"] = 1
+run(text="A mad man.", args=args)
+run(text="Artificial Intelligence.", args=args)
+run(text="The destruction of the rainforest.", args=args)
+run(text="Trip", args=args)
+run(text="Colonialism", args=args)
+run(text="LSD", args=args)
+run(text="Picasso", args=args)
+run(text="Da vinci", args=args)
+run(text="Mona Lisa", args=args)
+run(text="Salvador Dali", args=args)
+run(text="Dali", args=args)
+
+quit()
+
+
+run(text="A painting of a strong woman.", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="A painting of a sunflower", args=args)
+run(text=wizard, args=args)
+run(text=consciousness, args=args)
+run(text="Depression.", args=args)
+run(text="Schizophrenia.", args=args)
+
+args["style"] = "../stylegan2-ada-pytorch/logos_17040.pkl"
+run(img="../deepdaze/logo.png", args=args)
+run(img="../deepdaze/Logo_full.png", args=args)
+run(text="The logo of a company named AdaLab.", args=args)
+run(text="The logo of an A.I. startup named AdaLab.", args=args)
+run(text="The logo of an A.I. startup.", args=args)
+
+run(text="A painting of a sunflower", args=args)
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+
+quit()
+
+run(text="A painting of a beautiful sunset.", args=args)
+run(text="A painting of a strong man.", args=args)
+run(img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", args=args)
+run(img="base_images/anton_climb.jpg", args=args)
+run(img="base_images/hot-dog.jpg", args=args)
+run(text="A painting of a beautiful lake.", args=args)
+
+quit()
+
+args["style"] = "../stylegan2-ada-pytorch/logos_17040.pkl"
+
+#run(text="A rocket.", args=args)
+#run(text="A logo of a diving school at the silver lake.", args=args)
+#run(text="A neural network", args=args)
+#run(text="An alien claw", args=args)
+#run(text="A logo in the style of a neural network.", args=args)
+#run(text="A logo in the style of an alien claw.", args=args)
+
+#run(img="../deepdaze/logo.png", args=args)
+#run(img="../deepdaze/Logo_full.png", args=args)
+#run(text="The logo of a company named AdaLab.", args=args)
+#run(text="The logo of an A.I. startup named AdaLab.", args=args)
+#run(text="The logo of an A.I. startup.", args=args)
+
+#run(text="A painting of a sunflower", args=args)
+#run(text=wizard, args=args)
+#run(text=lama, args=args)
+#run(text=consciousness, args=args)
+
+run(text="A beautiful logo.", args=args)
+for s in range(0, 4):
+    run(text="A logo of a dance school", args=args, seed=s)
+
+
+args["noise_opt"] = False
+run(text="A logo of a rocket.", args=args)
+run(text="A logo of a diving school.", args=args)
+run(text="Artificial Intelligence.", args=args)
+run(text="A logo of an artificial intelligence start-up.", args=args)
+
+args["lr"] = 0.1
+run(text="A logo of a rocket.", args=args)
+run(text="A logo of a diving school.", args=args)
+run(text="Artificial Intelligence.", args=args)
+run(text="A logo of an artificial intelligence start-up.", args=args)
+
+args["lr"] = 0.05
+run(text="A logo of a rocket.", args=args)
+run(text="A logo of a diving school.", args=args)
+run(text="Artificial Intelligence.", args=args)
+run(text="A logo of an artificial intelligence start-up.", args=args)
+
+quit()
+
+
+
+args["style"] = "../lucid-sonic-dreams/faces (ffhq config-f).pkl"
+#run(text="A painting of a rose.", args=args)
+
+args["lr_schedule"] = 1
+#run(text="A painting of a rose.", args=args)
+#run(text="Consciousness.", args=args)
+
+
+args["lr_schedule"] = 0
+args["start_image_path"] = 'base_images/anton_climb.jpg'
+run(text="A beautiful person.", args=args)
+quit()
+run(text="Consciousness.", args=args)
+
+
+args["start_image_path"] = 'base_images/hot-dog.jpg'
+run(text="A painting of a rose.", args=args)
+run(text="Consciousness.", args=args)
+
+quit()
+
+args["style"] = "../lucid-sonic-dreams/faces (ffhq config-f).pkl"
+run(text="An enlightened person.", args=args)
+run(text="Enlightenment.", args=args)
+run(text="A depressive person.", args=args)
+run(text="Depression.", args=args)
+run(text="A demon.", args=args)
+run(text="A criminal.", args=args)
+run(text="A terrorist.", args=args)
+run(text="A rich person.", args=args)
+run(text="A poor person.", args=args)
+run(text="A loving person.", args=args)
+run(text="A hateful person.", args=args)
+
+
+quit()
+
+args["style"] = "../stylegan2-ada-pytorch/logos_4240.pkl"
+
+#run(img="../deepdaze/logo.png", args=args)
+#run(img="../deepdaze/Logo_full.png", args=args)
+run(text="The logo of a company named AdaLab.", args=args)
+run(text="The logo of an A.I. startup named AdaLab.", args=args)
+run(text="The logo of an A.I. startup.", args=args)
+
+run(text="A painting of a sunflower", args=args)
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+
+quit()
+
+run(text="A painting of a sunflower", args=args)
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+
+quit()
+run(text="A painting of a sunflower", args=args)
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+
+args["style"] = "../lucid-sonic-dreams/faces (ffhq config-f).pkl"
+run(text="A painting of a sunflower", args=args)
+run(text=wizard, args=args)
+run(text=lama, args=args)
+run(text=consciousness, args=args)
+
+quit()
 
 args["noise_opt"] = False
 args["reg_noise"] = False
@@ -192,9 +847,6 @@ run(text=lama, args=args)
 run(text=consciousness, args=args)
 
 quit()
-
-
-
 
 
 

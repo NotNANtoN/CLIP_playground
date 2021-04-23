@@ -6,6 +6,8 @@ import copy
 import sys
 
 sys.path.append("../")
+sys.path.append("../big_sleep_repo")
+
 from big_sleep_repo.big_sleep.big_sleep import Imagine
 #from big_sleep import Imagine
 
@@ -83,7 +85,7 @@ args = parser.parse_args()
 args = vars(args)
 
 
-args["image_size"] = 256
+args["image_size"] = 512
 
 # some prompts
 lama = "A llama wearing a scarf and glasses, reading a book in a cozy cafe."
@@ -96,7 +98,20 @@ bathtub = "A bathtub full of ice cream."
 prompt = lama
 
 
-args["num_cutouts"] = 128
+args["num_cutouts"] = 64
+args["max_classes"] = 15
+
+
+quit()s
+
+
+run("Happy birthday!", args=args)
+run("Celebrating a birthday with friends and balloons!", args=args)
+run("A birthday cake!", args=args)
+run("A determined, powerful, and happy woman celebrating her birthday.", args=args)
+run("A chocolate-cherry birthday cake.", args=args)
+
+quit()
 run("A psychedelic experience on LSD", args=args)
 run(wizard, args=args)
 run(lama, args=args)

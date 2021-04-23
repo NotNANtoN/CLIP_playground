@@ -38,12 +38,6 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
     args = copy.copy(args)
     for key in kwargs:
         args[key] = kwargs[key]
-    
-    if img is not None and isinstance(img, str):
-        pass
-        #img = img.replace("(", "\(")
-        #img = img.replace(")", "\)")
-        #img = '"' + img + '"'
 
     input_name = create_text_path(text=text, img=img, encoding=encoding)
     
@@ -148,7 +142,7 @@ def run_from_file(path, **args):
         run(text=text, **args)
 
 args["batch_size"] = 32
-args["epochs"] = 4
+args["epochs"] = 2
 args["lower_bound_cutout"] = 0.01
 
 lama = "A llama wearing a scarf and glasses, reading a book in a cozy cafe."
@@ -160,10 +154,24 @@ bathtub = "A bathtub full of ice cream."
 
 prompt = lama
 
-args["num_layers"] = 32
 args["hidden_size"] = 512
 args["center_bias"] = 1
 args["center_focus"] = 1
+args["averaging_weight"] = 0.0
+
+
+args["image_width"] = 512
+args["num_layers"] = 11
+run(text="A chocolate-cherry birthday cake!", args=args)
+run(text="Happy Birthday!", args=args)
+run(text="A determined, powerful, and happy woman celebrating her birthday.", args=args)
+run(text="A birthday cake.", args=args)
+
+
+quit()
+
+
+
 
 run(text="Manuela.", args=args)
 run(text="A woman is dancing Tango.", args=args)
