@@ -27,11 +27,15 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
     # switch to own folder
     original_dir = os.getcwd()
     time_str = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
-    remove = ["(", " ", ")", "/", "-", "[", "]"]
-    style = args["style"].split("/")[-1].split(".")[0]
-    for c in remove:
-        style = style.replace(c, "")
-    name = os.path.join("style_clip", str(style), time_str + "_" + input_name)
+    model_type = args["model_type"]
+    if model_type == "stylegan":
+        remove = ["(", " ", ")", "/", "-", "[", "]"]
+        style = args["style"].split("/")[-1].split(".")[0]
+        for c in remove:
+            style = style.replace(c, "")
+        name = os.path.join("style_clip", str(style), time_str + "_" + input_name)
+    else:
+        name = os.path.join(model_type, time_str + "_" + input_name)
     os.makedirs(name, exist_ok=True)
     # copy start image to folder
     args = dict(args)
@@ -129,7 +133,7 @@ def run_from_file(path, **args):
         run(text=text, **args)
 
 
-args["lower_bound_cutout"] = 0.05
+args["lower_bound_cutout"] = 0.1
 
 lama = "A llama wearing a scarf and glasses, reading a book in a cozy cafe."
 wizard = "A wizard in blue robes is painting a completely red image in a castle."
@@ -143,9 +147,9 @@ prompt = lama
 #args["style"] = "../stylegan2-ada-pytorch/logos_17040.pkl"
 #args["style"] = "../stylegan2-ada-pytorch/madziowa_p_800.pkl"
 #args["style"] = "../stylegan2-ada-pytorch/jan_regnart_640.pkl"
-args["style"] = "../stylegan2-ada-pytorch/astromaniacmag_160.pkl"
+#args["style"] = "../stylegan2-ada-pytorch/astromaniacmag_160.pkl"
+args["style"] = "../stylegan2-ada-pytorch/vint_retro_scifi_3200_2map.pkl"
 
-args["start_img_loss_weight"] = 0.5
 
 
 args["opt_all_layers"] = 1
@@ -156,9 +160,133 @@ args["seed"] = 1
 
 # Exps:
 
-args["start_image_steps"] = 1000
 
 args["batch_size"] = 32
+
+
+dalle_prompts = ["an armchair in the shape of an avocado, an armchair imitating an avocado", "A painting in cubist style of a capybara sitting in a forest at sunrise", "a lamp in the shape of a pikachu, a lamp imitating a pikachu", "a fox made of voxels sitting on a mountain"]
+
+
+args["style"] = "../stylegan2-ada-pytorch/vint_retro_scifi_3200_2map.pkl"
+
+#run(text="An alien", args=args, iterations=50)
+
+args["model_type"] = "vqgan"
+args["iterations"] = 200
+args["save_every"] = 1
+args["start_img_loss_weight"] = 0.0
+args["start_image_steps"] = 500
+
+args["sideX"] = 256
+args["sideY"] = 256
+
+args["lr"] = 0.1
+
+run(img="base_images/aicpa_logo_black.jpg", start_image_path="base_images/stance.jpg", args=args)
+
+#run(img="base_images/aicpa_logo_black.jpg", start_image_path="base_images/earth.jpg", args=args)
+#run(img="base_images/earth.jpg", start_image_path="base_images/aicpa_logo_black.jpg", args=args)
+
+
+
+quit()
+
+run(text="A pink alien that is flying to Saturn.", args=args, center_bias=5, averaging_weight=0.8)
+run(text="A pink alien that is flying to Saturn.", args=args, center_bias=5, averaging_weight=1.0)
+
+quit()
+
+run(text="Extravagant displayal of beauty.", args=args)
+run(text="you've beaten shia labeouf", args=args)
+run(text="you limp into the dark woods", args=args)
+run(text="wait! he isn't dead! Shia surprise!", args=args)
+
+
+quit()
+
+run(text="Intricate nothing.", args=args)
+run(text="Magic variables.", args=args)
+run(text="A pink alien that is flying to Saturn.", args=args)
+
+run(text="Troopers", args=args)
+run(text="Strange planets", args=args)
+run(text="Astronauts are having problems", args=args)
+run(text="A monster is eating people", args=args)
+run(text="Beautiful", args=args)
+
+
+run(text="Intricate nothing.", args=args, center_bias=5)
+run(text="Intricate nothing.", args=args, averaging_weight=0.8)
+
+run(text="A pink alien that is flying to Saturn.", args=args, center_bias=5)
+run(text="A pink alien that is flying to Saturn.", args=args, averaging_weight=0.8)
+
+
+
+
+
+quit()
+
+run(text="David Bowie.", args=args)
+run(text="Death.", args=args)
+run(text="Schizophrenia.", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="Consciousness.", args=args)
+run(text="A naked lady.", args=args)
+run(text="Anton.", args=args)
+
+
+quit()
+
+run(text="A green highway exit sign on the side of a desert road seen from a moving car.", args=args)
+run(text="A man and a woman in love.", args=args)
+run(text="Sumer Temple.", args=args)
+run(text="Crab nebula.", args=args)
+run(text="Shining stars.", args=args)
+
+
+
+quit()
+
+args["lr_schedule"] = 0
+
+run(text="Spaceships approaching earth", args=args)
+run(text="Mythical beings.", args=args, iterations=100)
+run(text="Love.", args=args, iterations=100)
+run(text="A green highway exit sign.", args=args, iterations=100)
+
+args["lr_schedule"] = 1
+args["iterations"] = 1000
+run(text="Spaceships approaching earth", args=args)
+run(text="Mythical beings.", args=args, iterations=100)
+run(text="Love.", args=args, iterations=100)
+run(text="A green highway exit sign.", args=args, iterations=100)
+
+
+
+quit()
+
+
+run(text="Troopers", args=args)
+run(text="Strange planets", args=args)
+run(text="Astronauts are having problems", args=args)
+run(text="A monster is eating people", args=args)
+run(text="Beautiful", args=args)
+
+
+args["iterations"] = 1000
+for t in dalle_prompts:
+    run(text=t, args=args)
+
+quit()
+
+args["style"] = "../stylegan2-ada-pytorch/madziowa_p_800.pkl"
+for t in dalle_prompts:
+    run(text=t, args=args)
+
+    
+
+quit()
 
 
 args["iterations"] = 2000
