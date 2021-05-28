@@ -184,7 +184,19 @@ args["batch_size"] = 24
 args["iterations"] = 500
 # codebook_size = 1024, # [1024, 16384]
 
-args["noise_augment"] = 1
+
+neg_text = '''incoherent, confusing, cropped, watermarks'''
+args["neg_text"] = neg_text
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+args["neg_text"] = None
+
+
 run(text="H R Giger", args=args)
 run(text="Rainforest", args=args)
 run(text="Night club", args=args)
@@ -256,6 +268,17 @@ run(text="Logo of an A.I. startup named AdaLab", args=args)
 
 neg_text = '''incoherent, confusing, cropped, watermarks'''
 args["neg_text"] = neg_text
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+
+args["latent_type"] = "embedding"
+args["noise_augment"] = 1
 run(text="H R Giger", args=args)
 run(text="Rainforest", args=args)
 run(text="Night club", args=args)
