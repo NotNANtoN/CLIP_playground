@@ -6,8 +6,10 @@ import json
 import sys
 import copy
 import shutil
+import copy
 
 import torch
+import torchvision.transforms as T
 import matplotlib.pyplot as plt
 
 sys.path.append("../StyleCLIP_modular")
@@ -73,8 +75,11 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
         )
         
         # save hyperparams:
+        save_args = copy.copy(args)
+        if "transform" in save_args:
+            del save_args["transform"]
         with open("hyperparams.json", "w+") as f:
-            json.dump(args, f)
+            json.dump(save_args, f)
        
         sys.path.append("../../stylegan2")
         sys.path.append("../../../stylegan2")
@@ -140,7 +145,8 @@ wizard = "A wizard in blue robes is painting a completely red image in a castle.
 consciousness = "Consciousness"
 bathtub_love = "I love you like a bathtub full of ice cream."
 bathtub = "A bathtub full of ice cream."
-prompt = lama
+snail = "A vector illustration of a snail made of harp. A snail with the texture of a harp."
+phoenix = "A phoenix rising from the ashes."
 
 # choose style
 #args["style"] = "../lucid-sonic-dreams/faces (ffhq config-f).pkl"
@@ -160,10 +166,6 @@ args["seed"] = 1
 
 # Exps:
 
-
-args["batch_size"] = 32
-
-
 dalle_prompts = ["an armchair in the shape of an avocado, an armchair imitating an avocado", "A painting in cubist style of a capybara sitting in a forest at sunrise", "a lamp in the shape of a pikachu, a lamp imitating a pikachu", "a fox made of voxels sitting on a mountain"]
 
 
@@ -172,15 +174,574 @@ args["style"] = "../stylegan2-ada-pytorch/vint_retro_scifi_3200_2map.pkl"
 #run(text="An alien", args=args, iterations=50)
 
 args["model_type"] = "vqgan"
-args["iterations"] = 200
-args["save_every"] = 1
+args["save_every"] = 20
 args["start_img_loss_weight"] = 0.0
 args["start_image_steps"] = 500
-
-args["sideX"] = 256
-args["sideY"] = 256
-
 args["lr"] = 0.1
+args["sideX"] = 480
+args["sideY"] = 480
+args["batch_size"] = 24
+args["iterations"] = 500
+# codebook_size = 1024, # [1024, 16384]
+
+args["noise_augment"] = 1
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+quit()
+
+args["latent_type"] = "embedding_sinh"
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+args["latent_type"] = "embedding"
+
+
+args["clip_latents"] = 1
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+args["clip_latents"] = 0
+
+args["optimizer"] = "AdamW"
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+args["optimizer"] = "AdamP"
+
+args["codebook_size"] = 16384
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+args["codebook_size"] = 16384
+args["latent_type"] = "code_sampling"
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+args["codebook_size"] = 1024
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+neg_text = '''incoherent, confusing, cropped, watermarks'''
+args["neg_text"] = neg_text
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+quit()
+
+
+args["lr_schedule"] = 0
+run(text=phoenix, args=args, iterations=2000)
+
+args["lr_schedule"] = 1
+run(text=phoenix, args=args, iterations=10)
+run(text=phoenix, args=args, iterations=50)
+run(text=phoenix, args=args, iterations=100)
+run(text=phoenix, args=args, iterations=200)
+run(text=phoenix, args=args, iterations=500)
+run(text=phoenix, args=args, iterations=1000)
+run(text=phoenix, args=args, iterations=2000)
+run(text=phoenix, args=args, iterations=5000)
+run(text=phoenix, args=args, iterations=10000)
+
+
+
+
+
+
+quit()
+
+args["sideX"] = 360
+args["sideY"] = 360
+args["lr_schedule"] = 0
+args["lr"]= 0.05
+args["save_every"] = 2
+
+
+
+args["iterations"] = 50
+run(start_image_path="base_images/michi_san_diego.jpg", text="Green mist on the highway", args=args)
+run(start_image_path="base_images/michi_san_diego.jpg", text="Green", args=args)
+run(start_image_path="base_images/michi_san_diego.jpg", text="Green jungle", args=args)
+run(start_image_path="base_images/michi_san_diego.jpg", text="Jungle", args=args)
+
+args["start_img_loss_weight"] = 0.1
+args["iterations"] = 50
+run(start_image_path="base_images/michi_san_diego.jpg", text="Green mist on the highway", args=args)
+run(start_image_path="base_images/michi_san_diego.jpg", text="Green", args=args)
+run(start_image_path="base_images/michi_san_diego.jpg", text="Green jungle", args=args)
+run(start_image_path="base_images/michi_san_diego.jpg", text="Jungle", args=args)
+
+quit()
+
+
+args["iterations"] = 2000
+args["save_every"] = 5
+run(start_image_path="base_images/michi_san_diego.jpg", img="base_images/michi_san_diego.jpg", args=args)
+
+
+quit()
+
+run(img="base_images/michi_san_diego.jpg", args=args)
+
+
+args["latent_type"] = "code_sampling"
+run(img="base_images/ouzi.jpg", args=args)
+run(img="base_images/anton_climb.jpg", args=args)
+run(img="base_images/michi_san_diego.jpg", args=args)
+
+quit()
+
+run(text=snail, args=args)
+run(text=snail, args=args, latent_type="code_sampling")
+run(text=snail, args=args, use_tv_loss=True)
+run(img="base_images/earth.jpg", args=args)
+run(img="base_images/ouzi.jpg", args=args)
+run(img="base_images/anton_climb.jpg", args=args)
+run(img="base_images/hot-dog.jpg", args=args)
+run(img="base_images/Autumn_1875_Frederic_Edwin_Church.jpg", args=args)
+run(img="base_images/stance.jpg", args=args)
+
+
+quit()
+
+run(text="A fusion reactor", args=args)
+run(text="Fusion", args=args)
+run(text="Fusion plasma", args=args)
+run(text="An artificial sun", args=args)
+run(text="A lab-grown sun", args=args)
+run(text="The all mighty power of the sun", args=args)
+run(text="The solution of the climate crisis", args=args)
+run(text="A healthy and sustainable meal", args=args)
+run(text="The effects of the climate change", args=args)
+run(text="The effects of the climate crisis", args=args)
+run(text="Apocalypse", args=args)
+run(text="Life during a pandemic", args=args)
+run(text="Lockdown", args=args)
+
+quit()
+
+args["use_tv_loss"] = 0
+run(text="Extinction Rebellion", args=args)
+run(text="Happy Birthday", args=args)
+run(text="Alles gute zum Geburtstag", args=args)
+run(text="Feliz Cumpleanos", args=args)
+run(text="Alles gute zum Geburtstag, Michi, du alter Racker!", args=args)
+run(text="Happy birthday Michi, you old rascal!", args=args)
+
+args["use_tv_loss"] = 1
+run(text="Extinction Rebellion", args=args)
+run(text="Happy Birthday", args=args)
+run(text="Alles gute zum Geburtstag", args=args)
+run(text="Feliz Cumpleanos", args=args)
+run(text="Alles gute zum Geburtstag, Michi, du alter Racker!", args=args)
+run(text="Happy birthday Michi, you old rascal!", args=args)
+
+
+
+quit()
+
+
+
+run(text="A black hole", args=args)
+run(text="Artificial Intelligence", args=args)
+run(text="Big city life", args=args)
+run(text="The most beautiful painting ever", args=args)
+run(text="The most ugly painting ever", args=args)
+run(text="A fire tornado that shoots lasers at a dinosaur", args=args)
+run(text="An apocalyptic train", args=args)
+run(text="Theorem of Pythagoras", args=args)
+run(text="Mathematics", args=args)
+run(text="Physics", args=args)
+run(text="Jupyter's moons", args=args)
+run(text="Pure love and acceptance", args=args)
+run(text="Nazis riding dinosaurs while shooting lasers", args=args)
+run(text="Space pussy", args=args)
+run(text="The meaning of life", args=args)
+run(text="What is the meaning of life?", args=args)
+run(text="The useless third of the population", args=args)
+run(text="Freedom after an eternal lockdown", args=args)
+run(text="Freedom by vaccination", args=args)
+run(text="Hope", args=args)
+run(text="Kartoffelsalat", args=args)
+run(text="Seeing without your eyes", args=args)
+run(text="Weltschmerz", args=args)
+run(text="Wanderlust", args=args)
+run(text="Innocence", args=args)
+run(text="A warm summer breeze", args=args)
+run(text="The smell of spring", args=args)
+run(text="Silky clouds in the sky that paint my carefree feelings", args=args)
+run(text="Underground rebels hiding from a train", args=args)
+run(text="The matrix", args=args)
+run(text="Are we living in a simulation?", args=args)
+run(text="Rescuing queers from a desert prison with a jeep", args=args)
+run(text="2 + 2", args=args)
+run(text="1 + 1", args=args)
+
+
+quit()
+
+run(text="Digital music stored on woven fabric by people dancing around a pyramid.", args=args)
+run(text="Digital music stored on woven fabric by people on drugs dancing around a pyramid.", args=args)
+run(text="Digital music stored on woven fabric by people on drugs dancing around a fire pyramid.", args=args)
+run(text="Digital music stored on woven fabric.", args=args)
+run(text="Digital music stored on colourful woven fabric.", args=args)
+run(text="A computer historian showing off his collection in music.", args=args)
+run(text="An angry red giant rubber duck attacking a group of hunters.", args=args)
+run(text="A hunting party attract an angry red giant rubber duck.", args=args)
+run(text="Micheal Büchler", args=args)
+run(text="Anton Wiehe", args=args)
+run(text="Nadia Burke", args=args)
+run(text="Thomas Hamacher", args=args)
+run(text="A lightning shimmering over the green ocean", args=args)
+run(text="Ultra cold plasma", args=args)
+
+args["latent_type"] = "code_sampling"
+run(text="Digital music stored on woven fabric by people dancing around a pyramid.", args=args)
+run(text="Digital music stored on woven fabric by people on drugs dancing around a pyramid.", args=args)
+run(text="Digital music stored on woven fabric by people on drugs dancing around a fire pyramid.", args=args)
+run(text="Digital music stored on woven fabric.", args=args)
+run(text="Digital music stored on colourful woven fabric.", args=args)
+run(text="A computer historian showing off his collection in music.", args=args)
+run(text="An angry red giant rubber duck attacking a group of hunters.", args=args)
+run(text="A hunting party attract an angry red giant rubber duck.", args=args)
+run(text="Micheal Büchler", args=args)
+run(text="Anton Wiehe", args=args)
+run(text="Nadia Burke", args=args)
+run(text="Thomas Hamacher", args=args)
+run(text="A lightning shimmering over the green ocean", args=args)
+run(text="Ultra cold plasma", args=args)
+
+
+quit()
+
+
+run(text="Anton going into a rabbit hole", args=args)
+run(text="Opening a door to parallel dimensions", args=args)
+
+args["latent_type"] = "code_sampling"
+run(text="Anton going into a rabbit hole", args=args)
+run(text="Opening a door to parallel dimensions", args=args)
+
+
+quit()
+
+run(text="The mushroom wizard", args=args)
+run(text="The fire wizard", args=args)
+run(text="Fire fractal", args=args)
+run(text="High quality HD rendering of fire", args=args)
+run(text="HD rendering of water", args=args)
+
+
+args["latent_type"] = "code_sampling"
+run(text="The mushroom wizard", args=args)
+run(text="The fire wizard", args=args)
+run(text="Fire fractal", args=args)
+run(text="High quality HD rendering of fire", args=args)
+run(text="HD rendering of water", args=args)
+
+
+quit()
+
+run(text="Meditative peace in a sunlit forest", args=args)
+run(text="Shattered plates on the grass", args=args)
+run(text="Fire in the sky", args=args)
+run(text="The mushroom wizard", args=args)
+
+quit()
+
+args["latent_type"] = "code_sampling"
+
+run(text="The mushroom wizard", args=args)
+run(text="The first supper", args=args)
+run(text="The last supper", args=args)
+
+
+quit()
+
+run(text="Anton", args=args)
+run(text="Anton Wiehe", args=args)
+run(text="Meditative peace in a sunlit forest", args=args)
+run(text="Shattered plates on the grass", args=args)
+run(text="Fire in the sky", args=args)
+run(text="The mushroom wizard", args=args)
+
+
+
+quit()
+
+run(text="She was on a film set with psychedelic aliens", args=args)
+args["latent_type"] = "code_sampling"
+
+
+run(text="Eternity looped forever", args=args)
+run(text="Existence consciousness integration", args=args)
+run(text="The mushroom wizard", args=args)
+run(text="She was on a film set with psychedelic aliens", args=args)
+
+
+quit()
+
+run(text="The library of the sun", args=args)
+run(text="Intricate nothing", args=args)
+
+
+quit()
+
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+args["latent_type"] = "code_sampling"
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+args["use_tv_loss"] = 1
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+args["transform"] = 0
+run(text="David Bowie", args=args)
+run(text=lama, args=args)
+run(text=wizard, args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+
+quit()
+
+
+args["latent_type"] = "code_sampling"
+run(text="David Bowie", args=args)
+run(text=lama, args=args)
+run(text=wizard, args=args)
+
+quit()
+
+args["use_tv_loss"] = 1
+run(text="David Bowie", args=args)
+run(text=lama, args=args)
+run(text=wizard, args=args)
+
+quit()
+
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+
+
+quit()
+
+args["latent_type"] = "embedding" # embedding, code, sampled_embedding,
+#run(text="David Bowie", args=args)
+#run(text=lama, args=args)
+#run(text=wizard, args=args)
+
+# does not work
+#args["latent_type"] = "code" # embedding, code, sampled_embedding,
+#run(text="David Bowie", args=args)
+#run(text=lama, args=args)
+#run(text=wizard, args=args)
+
+args["latent_type"] = "sampled_embedding" # embedding, code, sampled_embedding,
+run(text="David Bowie", args=args)
+run(text=lama, args=args)
+run(text=wizard, args=args)
+
+
+quit()
+args["averaging_weight"] = 0.0
+#run(text="Love", args=args)
+#run(text="David Bowie.", args=args)
+#run(text="Death.", args=args)
+#run(text="Schizophrenia.", args=args)
+#run(text="A psychedelic experience on LSD.", args=args)
+#run(text="Consciousness.", args=args)
+
+args["averaging_weight"] = 1.0
+#run(text="Love", args=args)
+#run(text="David Bowie.", args=args)
+#run(text="Death.", args=args)
+#run(text="Schizophrenia.", args=args)
+#run(text="A psychedelic experience on LSD.", args=args)
+#run(text="Consciousness.", args=args)
+
+
+# fully new custom transform
+color = 0.9
+degrees = 10
+transform = T.Compose([
+    T.RandomResizedCrop(224, scale=(0.1, 1.0)),#, ratio=(0.75, 1.3333333333333333)),
+    T.ColorJitter(brightness=color, contrast=color, saturation=color, hue=color / 8),
+    T.RandomAffine(10, translate=(0.01, 0.2), shear=None),
+    T.RandomErasing(p=0.5, scale=(0.02, 0.1), ratio=(0.3, 3.3), value=0),
+])
+args["transform"] = transform
+args["do_cutout"] = 0
+args["averaging_weight"] = 0.0
+#run(text="Love", args=args)
+#run(text="David Bowie.", args=args)
+#run(text="Death.", args=args)
+#run(text="Schizophrenia.", args=args)
+#run(text="A psychedelic experience on LSD.", args=args)
+#run(text="Consciousness.", args=args)
+
+# new transform without cutouts!
+transform = T.Compose([
+    T.Resize(224),
+    T.CenterCrop(224),
+    T.ColorJitter(brightness=color, contrast=color, saturation=color, hue=color / 8),
+    T.RandomAffine(10, translate=(0.01, 0.2), shear=None),
+    T.RandomErasing(p=0.5, scale=(0.02, 0.1), ratio=(0.3, 3.3), value=0),
+])
+args["transform"] = transform
+run(text="Love", args=args)
+run(text="David Bowie.", args=args)
+run(text="Death.", args=args)
+run(text="Schizophrenia.", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="Consciousness.", args=args)
+
+quit()
+
+# Dalle-exp
+for prompt in dalle_prompts:
+    run(text=prompt, args=args)
+    
+quit()
+
+
+args["sideX"] = 128
+args["sideY"] = 128
+args["batch_size"] = 8
+# bs8xga8  7GB
+# batch size 64
+args["gradient_accumulate_every"] = 8
+run(text="Love", args=args)
+run(text="David Bowie.", args=args)
+run(text="Death.", args=args)
+
+
+args["batch_size"] = 32
+
+
+run(text="The first supper", args=args)
+run(text="The last supper", args=args)
+run(text="The first supper", args=args, circular=1)
+run(text="The last supper", args=args, circular=1)
+
+quit()
+
+
+args["batch_size"] = 32
+args["transform"] = 0
+args["circular"] = 0
+#run(text="Good old regular cut-out transforms.", args=args)
+#run(text="Love", args=args)
+#run(text="David Bowie.", args=args)
+#run(text="Death.", args=args)
+#run(text="Schizophrenia.", args=args)
+#run(text="A psychedelic experience on LSD.", args=args)
+#run(text="Consciousness.", args=args)
+
+
+quit()
+
+args["transform"] = None
+args["circular"] = 0
+run(text="Old cut-outs with new fancy transforms that center the object.", args=args)
+run(text="Love", args=args)
+run(text="David Bowie.", args=args)
+run(text="Death.", args=args)
+run(text="Schizophrenia.", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="Consciousness.", args=args)
+
+args["transform"] = None
+args["circular"] = 1
+run(text="Weird new circular images", args=args)
+run(text="Love", args=args)
+run(text="David Bowie.", args=args)
+run(text="Death.", args=args)
+run(text="Schizophrenia.", args=args)
+run(text="A psychedelic experience on LSD.", args=args)
+run(text="Consciousness.", args=args)
+
+
+args["batch_size"] = 2
+args["transform"] = None
+args["circular"] = 0
+run(text="Batch size tests.", args=args)
+run(text="Love", args=args)
+
+args["batch_size"] = 4
+run(text="Love", args=args)
+
+args["batch_size"] = 8
+run(text="Love", args=args)
+run(text="David Bowie.", args=args)
+run(text="Death.", args=args)
+
+args["batch_size"] = 16
+run(text="Love", args=args)
+run(text="David Bowie.", args=args)
+run(text="Death.", args=args)
+
+
+quit()
 
 run(img="base_images/aicpa_logo_black.jpg", start_image_path="base_images/stance.jpg", args=args)
 
