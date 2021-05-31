@@ -180,10 +180,106 @@ args["start_image_steps"] = 500
 args["lr"] = 0.1
 args["sideX"] = 480
 args["sideY"] = 480
-args["batch_size"] = 24
-args["iterations"] = 500
+args["batch_size"] = 32
+args["iterations"] = 1500
 # codebook_size = 1024, # [1024, 16384]
 
+
+bands_that_arent_real = ["Necrotic Tyrant - Lost Crypts of the Unremembered", "Apocalyptic Maelstrom - Darkwater Monoliths", "Of Ancient Times - Necropolis of the Blood Red Sun", "Sectomancer - Blood from a Dying Sun", "Beneath the Dark Sea - It Lurks in the Deep"]
+prank_comics = ["Take a picture of your bathroom and plaster it on your fridge.", "Stand in line for a movie for 30 minutes then leave.", "Ordering junk treats from TV ads at 3 in the morning, like those 'falling in the ocean' doughnuts", "Eat a banan inside your own mouth", "Have a tortoise deliver your package for you, don't be surprised if it sings 'Happy Birthday' back at you.", "Opt for the treadmill. You'll be running in the nude.", "Put a cup of coffee on your lap. It's an oldie, but it's still a favourite.", "My cat slept through a December blizzard in Florida this year", "There's a square of chicken in your front yard", "Placing a crown on your head."]
+pinar_1 = ["quantum physics", "God", "The soul of the world", "unconditional love", "Spiritual teacher", "Spirituality", "Goddess of the world", "Anima Mundi", "Twilight state", "Children of god", "mama matrix most mysterious", "psychic", "the power of magic", "psilocybin", "shamanism", "non-human intelligence", "alchemy", "Amongst the elves", "non-duality", "duality", "metaphysical sensitivity"]
+
+def add_context(words, prefix="", suffix=""):
+    return [prefix + word + suffix for word in words]
+
+args["optimizer"] = "Adam"
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+args["optimizer"] = "AdamP"
+
+args["optimizer"] = "DiffGrad"
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+args["optimizer"] = "AdamP"
+
+
+
+for prompt in pinar_1:
+    run(text=prompt, args=args, circular=1)
+    
+for prompt in pinar_1:
+    run(text=prompt, args=args, circular=0)
+    
+
+quit()
+
+args["circular"] = 1
+run(text="AdaLab x SeyhanLee", args=args)
+run(text="We are on the cusp of a new era", args=args)
+run(text="Sunday worship", args=args)
+run(text="A new era", args=args)
+run(text="Genesis", args=args)
+
+
+quit()
+
+args["circular"] = 1
+run(text="Consciousness", args=args, iterations=500)
+run(text="Consciousness", args=args)
+run(text="David Bowie", args=args)
+run(text="Shia LaBouef", args=args)
+run(text="SeyhanLee", args=args)
+run(text="AdaLab", args=args)
+
+quit()
+
+for band in add_context(bands_that_arent_real, suffix=", a death metal album cover."):
+    run(text=band, args=args, neg_text="incoherent, written text")
+
+for band in add_context(bands_that_arent_real, suffix=", a death metal album cover."):
+    run(text=band, args=args)
+
+
+
+args["latent_type"] = "code_sampling"
+
+for band in bands_that_arent_real:
+    run(text=band, args=args)
+    
+for band in add_context(bands_that_arent_real, prefix="An album cover for: "):
+    run(text=band, args=args)
+    
+for band in add_context(bands_that_arent_real, suffix=", an album cover."):
+    run(text=band, args=args)
+    
+for band in add_context(bands_that_arent_real, suffix=", an death metal album cover."):
+    run(text=band, args=args)
+
+for prank in prank_comics:
+    run(text=prank, args=args)
+    
+for prank in add_context(prank_comics, prefix="A black-and-white comic displaying: "):
+    run(text=prank, args=args)
+    
+for prank in add_context(prank_comics, suffix=", illustrated as a comic."):
+    run(text=prank, args=args)
+    
+for prank in add_context(prank_comics, suffix=", illustrated with stick figures."):
+    run(text=prank, args=args)
+    
+
+
+quit()
 
 neg_text = '''incoherent, confusing, cropped, watermarks'''
 args["neg_text"] = neg_text
