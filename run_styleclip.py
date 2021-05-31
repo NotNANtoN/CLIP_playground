@@ -192,6 +192,17 @@ pinar_1 = ["quantum physics", "God", "The soul of the world", "unconditional lov
 def add_context(words, prefix="", suffix=""):
     return [prefix + word + suffix for word in words]
 
+
+
+args["sideX"] = 1280
+args["sideY"] = 720
+args["batch_size"] = 32
+args["iterations"] = 500
+
+run(text="David Bowie on the moon", args=args)
+
+quit()
+
 args["optimizer"] = "Adam"
 run(text="H R Giger", args=args)
 run(text="Rainforest", args=args)
