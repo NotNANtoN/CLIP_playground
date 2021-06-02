@@ -192,6 +192,40 @@ pinar_1 = ["quantum physics", "God", "The soul of the world", "unconditional lov
 def add_context(words, prefix="", suffix=""):
     return [prefix + word + suffix for word in words]
 
+args["use_tv_loss"] = 1
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+args["use_tv_loss"] = 0
+
+args["decay_cutout"] = 1
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+args["decay_cutout"] = 0
+
+
+quit()
+
+run(text="The forest wizard. Unreal engine", args=args, iterations=500, decay_cutout=1)
+run(text="The forest wizard. Unreal engine", args=args, iterations=500, decay_cutout=0)
+
+quit()
+    
+for prompt in pinar_1:
+    run(text=prompt, args=args, circular=0)
+    
+    
+quit()
+
 args["optimizer"] = "Adam"
 run(text="H R Giger", args=args)
 run(text="Rainforest", args=args)
@@ -212,14 +246,6 @@ run(text="Internet", args=args)
 run(text="Logo of an A.I. startup named AdaLab", args=args)
 args["optimizer"] = "AdamP"
 
-
-
-for prompt in pinar_1:
-    run(text=prompt, args=args, circular=1)
-    
-for prompt in pinar_1:
-    run(text=prompt, args=args, circular=0)
-    
 
 quit()
 
