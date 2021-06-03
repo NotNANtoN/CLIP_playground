@@ -72,6 +72,7 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
         imagine.set_clip_encoding(text=text,
             img=img,
             encoding=encoding,
+            neg_text=args["neg_text"] if "neg_text" in args else None,
         )
         
         # save hyperparams:
@@ -189,8 +190,53 @@ bands_that_arent_real = ["Necrotic Tyrant - Lost Crypts of the Unremembered", "A
 prank_comics = ["Take a picture of your bathroom and plaster it on your fridge.", "Stand in line for a movie for 30 minutes then leave.", "Ordering junk treats from TV ads at 3 in the morning, like those 'falling in the ocean' doughnuts", "Eat a banan inside your own mouth", "Have a tortoise deliver your package for you, don't be surprised if it sings 'Happy Birthday' back at you.", "Opt for the treadmill. You'll be running in the nude.", "Put a cup of coffee on your lap. It's an oldie, but it's still a favourite.", "My cat slept through a December blizzard in Florida this year", "There's a square of chicken in your front yard", "Placing a crown on your head."]
 pinar_1 = ["quantum physics", "God", "The soul of the world", "unconditional love", "Spiritual teacher", "Spirituality", "Goddess of the world", "Anima Mundi", "Twilight state", "Children of god", "mama matrix most mysterious", "psychic", "the power of magic", "psilocybin", "shamanism", "non-human intelligence", "alchemy", "Amongst the elves", "non-duality", "duality", "metaphysical sensitivity"]
 
+neg_text = 'incoherent, confusing, cropped, watermarks'
+
 def add_context(words, prefix="", suffix=""):
     return [prefix + word + suffix for word in words]
+
+args["early_stopping_steps"] = 200
+args["use_tv_loss"] = 1
+
+prompt = "Internet"
+run(text=prompt, args=args, neg_text="AI-generated")
+run(text=prompt, args=args, neg_text="artificially generated image")
+run(text=prompt, args=args, neg_text="cropped, watermarks")
+run(text=prompt, args=args, neg_text="anime")
+run(text="tiamat", args=args, neg_text="anime")
+
+
+quit()
+prompt = "tiamat"
+run(text=prompt, args=args)
+run(text=prompt, args=args, neg_text="incoherent")
+run(text=prompt, args=args, neg_text="confusing")
+run(text=prompt, args=args, neg_text="cropped")
+run(text=prompt, args=args, neg_text="watermarks")
+run(text=prompt, args=args, neg_text=neg_text)
+
+quit()
+
+run(text="beautiful coral reef. RTX on", args=args)
+run(text="beautiful coral reef. HD rendered. RTX.", args=args)
+run(text="beautiful coral reef. RTX off", args=args)
+
+args["neg_text"] = None
+run(text=neg_text, args=args)
+
+quit()
+
+args["model_type"] = "siren"
+args["sideX"] = 256
+args["sideY"] = 256
+args["num_layers"] = 32
+args["hidden_size"] = 256
+args["lr_schedule"] = 0
+args["lr"] = 1e-5,
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+
+quit()
 
 args["use_tv_loss"] = 1
 run(text="H R Giger", args=args)
