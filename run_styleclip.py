@@ -91,8 +91,8 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
         
         # plot losses
         plt.figure()
-        plt.plot(imagine.aug_losses, label="Augmented")
-        plt.plot(imagine.non_aug_losses, label="Raw")
+        plt.plot([l.cpu().item() for l in imagine.aug_losses], label="Augmented")
+        plt.plot([l.cpu().item() for l in imagine.non_aug_losses], label="Raw")
         plt.legend()
         plt.savefig("loss_plot.png")
         plt.clf()
@@ -198,8 +198,65 @@ def add_context(words, prefix="", suffix=""):
 args["early_stopping_steps"] = 200
 args["use_tv_loss"] = 1
 
+#run(text="David Bowie", args=args, neg_text=neg_text)
+
+args["model_type"] = "siren"
+args["sideX"] = 512
+args["sideY"] = 512
+args["num_layers"] = 44
+args["hidden_size"] = 252
+args["lr_schedule"] = 0
+args["lr"] = 1e-5
+#args["lr"] = 0.5
+
+
+prompt = "internet"
+args["mini_batch_size"] = 2** 13
+print("Mini batch size: ", args["mini_batch_size"])
+
+args["decay_cutout"] = 1
+args["neg_text"] = neg_text
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+quit()
+
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+args["neg_text"] = neg_text
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+
+quit()
+run(text=prompt, args=args, neg_text=neg_text)
+
+
+quit()
+
 prompt = "Internet"
-run(text=prompt, args=args, neg_text="AI-generated")
+run(text=prompt, args=args, neg_text="blurry")
+run(text=prompt, args=args, neg_text="ugly")
+
+
+
+quit()
 run(text=prompt, args=args, neg_text="artificially generated image")
 run(text=prompt, args=args, neg_text="cropped, watermarks")
 run(text=prompt, args=args, neg_text="anime")
