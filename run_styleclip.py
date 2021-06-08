@@ -95,7 +95,7 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
         plt.plot([l.cpu().item() for l in imagine.non_aug_losses], label="Raw")
         plt.legend()
         plt.savefig("loss_plot.png")
-        plt.clf()
+        plt.close()
        
         # save
         del imagine.perceptor
@@ -105,6 +105,31 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
 
     finally:
         os.chdir(original_dir)
+        
+        
+def create_encoding(text_list=None, img_list=None, text_weight=0.5, args=None, **kwargs):
+    if text_list is None:
+        text_weight = 0
+    elif img_list is None:
+        text_weight = 1
+        
+    if args is None:
+        args = {}
+    args = copy.copy(args)
+    for key in kwargs:
+        args[key] = kwargs[key]
+
+    imagine = Imagine(
+        save_progress=True,
+        open_folder=False,
+        save_video=True,
+        **args
+    )
+
+    encode_imgs = torch.mean(torch.stack([imagine.create_img_encoding(img=i) for i in img_list]), dim=0) if img_list is not None else 0
+    encode_texts = torch.mean(torch.stack([imagine.create_text_encoding(text=t) for t in text_list]), dim=0) if text_list is not None else 0
+
+    return text_weight * encode_texts + (1 - text_weight) * encode_imgs
 
 
 parser = argparse.ArgumentParser()
@@ -179,8 +204,8 @@ args["save_every"] = 20
 args["start_img_loss_weight"] = 0.0
 args["start_image_steps"] = 500
 args["lr"] = 0.1
-args["sideX"] = 480
-args["sideY"] = 480
+args["sideX"] = 1080
+args["sideY"] = 720
 args["batch_size"] = 32
 args["iterations"] = 1500
 # codebook_size = 1024, # [1024, 16384]
@@ -189,14 +214,144 @@ args["iterations"] = 1500
 bands_that_arent_real = ["Necrotic Tyrant - Lost Crypts of the Unremembered", "Apocalyptic Maelstrom - Darkwater Monoliths", "Of Ancient Times - Necropolis of the Blood Red Sun", "Sectomancer - Blood from a Dying Sun", "Beneath the Dark Sea - It Lurks in the Deep"]
 prank_comics = ["Take a picture of your bathroom and plaster it on your fridge.", "Stand in line for a movie for 30 minutes then leave.", "Ordering junk treats from TV ads at 3 in the morning, like those 'falling in the ocean' doughnuts", "Eat a banan inside your own mouth", "Have a tortoise deliver your package for you, don't be surprised if it sings 'Happy Birthday' back at you.", "Opt for the treadmill. You'll be running in the nude.", "Put a cup of coffee on your lap. It's an oldie, but it's still a favourite.", "My cat slept through a December blizzard in Florida this year", "There's a square of chicken in your front yard", "Placing a crown on your head."]
 pinar_1 = ["quantum physics", "God", "The soul of the world", "unconditional love", "Spiritual teacher", "Spirituality", "Goddess of the world", "Anima Mundi", "Twilight state", "Children of god", "mama matrix most mysterious", "psychic", "the power of magic", "psilocybin", "shamanism", "non-human intelligence", "alchemy", "Amongst the elves", "non-duality", "duality", "metaphysical sensitivity"]
-
+fritz_imgs = ["base_images/fritzkola/wahrheit_einhorn.jpg", "base_images/fritzkola/wahrheit_fluch.jpg", "base_images/fritzkola/wahrheit_zombies.jpg", "base_images/fritzkola/wahrheiten_satan.jpg"]
+fritz_imgs_cropped = ["base_images/fritzkola/wahrheit_einhorn_cropped.png", "base_images/fritzkola/wahrheit_fluch_cropped.png", "base_images/fritzkola/wahrheit_zombies_cropped.png", "base_images/fritzkola/wahrheit_satan_cropped.png"]
+fritz_texts = ["Plastic bottles killed the last unicorn", "Each plastic bottle has a soul curse embedded in it", "Plastic bottles turn us into mindless zombies", "Plastic bottles come directly from Satan"]
+fritz_texts_ger = ["Plastikflaschen töteten das letzte einhorn", "In jede plastikflasche ist ein seelenfluch eingearbeitet", "plastikflaschen machen uns zu willenlosen zombies", "Plastikflaschen kommen direkt von Satan"]
+fritz_texts_desc = ["A dead unicorn, killed by plastic bottles.", "An evil witch holding a plastic bottle.", "Zombies with plastic bottles as brains. Zombies with heads filled with plastic bottles."]
 neg_text = 'incoherent, confusing, cropped, watermarks'
+fritz_satan = ["Plastic bottles come directly from Satan", "Plastic bottles are made by Satan", "Plastic bottles pooped by satan, plastic bottles come out of Satan's ass."]
+
 
 def add_context(words, prefix="", suffix=""):
     return [prefix + word + suffix for word in words]
 
-args["early_stopping_steps"] = 200
+args["early_stopping_steps"] = 0
 args["use_tv_loss"] = 1
+args["neg_text"] = neg_text
+args["iterations"] = 500
+
+comics = add_context(fritz_texts, suffix=". Comic.")
+comic_style = add_context(fritz_texts, suffix=". Comic-book style.")
+
+satan_comics = add_context(fritz_satan, suffix=". Comic.")
+satan_bw = add_context(fritz_satan, suffix=". A black and white illustration.")
+satan_fritzkola_ad = add_context(fritz_satan, suffix=". In the style of a fritzkola advertisement.")
+satan_fritzkola = add_context(fritz_satan, suffix=". Fritzkola.")
+
+
+
+args["iterations"] = 2000
+args["decay_cutout"] = 0
+for prompt in fritz_satan:
+    run(text=prompt, args=args)
+for prompt in satan_comics:
+    run(text=prompt, args=args)
+for prompt in satan_bw:
+    run(text=prompt, args=args)
+for prompt in satan_fritzkola_ad:
+    run(text=prompt, args=args)
+for prompt in satan_fritzkola:
+    run(text=prompt, args=args)
+
+
+
+quit()
+
+#for prompt in comics:
+#    run(text=prompt, args=args, iterations=2000)
+#for prompt in comics:
+#    run(text=prompt, args=args, decay_cutout=1, iterations=2000)  
+#for prompt in comic_style:
+#    run(text=prompt, args=args, iterations=2000)
+#for prompt in comic_style:
+#    run(text=prompt, args=args, decay_cutout=1, iterations=2000)
+
+    
+for img in fritz_imgs_cropped[1:]:
+    run(img=img, args=args, iterations=2000)
+    
+    
+    
+classics = ["A man painting a red painting.", "A wizard in blue robes is painting a red painting in a castle", "A psychedelic experience on LSD.", "Schizophrenia", "Depression", "Love"]
+religion_gpt = ["Above, in its brilliance, a solitary sun spins once again, burned, to slow the pace of the shifting sea of Nature. Above, the gods sing as if they are from the infinite.", "The bark of another corpse bleeds with the blood of our bond, this one rotted and long forgotten. The entire God of the Sacrifice looks down upon our abode, a drowning world that is us.", "As you chant, so I weave my voice. I craft my strings of fire, I fill the world with my own sweet sound. The stars themselves, the ends of the land, the wind, even the place where the light goes out all bend to worship me.", "Our hearts are hard and our bodies are weak. Our mind is a temple of madness. To tear it down is to destroy the seeds of our own transformation. We cannot kill our darkness. It is within us, waiting to be liberated. The folly of the human spirit.", "The oceans are my delights, and as I sleep in them my children lie with me in dreams of pure light. Their mother is my constant and eternal sleep. Not of her own will, but by her own will. I have no desire to enter the lake of shadow. Not in the dusk, not when the shades bleed.", "The infinite regress of illusion is the shortest path to nothingness. The void is the core of the matter of illusion. The void is eternal and unmoving. All our movements are reflections of ourselves in a mirror.", "We are nothing more than a million dreamers entwined in an infinite dream, completely unaware of our own identities. When the tentacles of the dream begin to stir, we wake up.", "A thousand worlds died. The best of them will live on. But only in infinite circles. Forever and ever. Except we are not the best of them. We are not the creams-of-life of the understanding.", "Each of our mortal experiences is just one more system of realization of a theme determined by our inherited molecular-cellular code.", "The godheads who dare not study the law of the unknown whispered in my ears to put me in an architect-work of my own to predict the unknown. It was too much work for my ignorant eyes.", "Your vision is weakened by the path of sin, which will not leave you until you repent. Your hatred of God is deep. You fear to kneel before God, lest you be stained with his blood.", "It is easy to be sane in a castle surrounded by walls. It is easy to be sane in the company of friends. It is easy to be sane in the company with trappings of royalty. It is easy to be sane in the garden. To be sane in the company of gods is to be roundly miserable."]
+    
+args["iterations"] = 2000
+args["decay_cutout"] = 1
+for prompt in classics:
+    run(text=prompt, args=args)
+for prompt in religion_gpt:
+    run(text=prompt, args=args)
+args["decay_cutout"] = 0
+for prompt in classics:
+    run(text=prompt, args=args)
+for prompt in religion_gpt:
+    run(text=prompt, args=args)
+    
+quit()
+
+for prompt in fritz_texts_desc:
+    run(text=prompt, args=args)
+
+for prompt in add_context(fritz_texts_desc, suffix=". A black and white illustration."):
+    run(text=prompt, args=args)
+
+for prompt in fritz_texts:
+    run(text=prompt, args=args, decay_cutout=1)
+    
+for prompt, img in zip(fritz_texts, fritz_imgs_cropped):
+    run(text=prompt, img=img, args=args)
+    
+for prompt, w in zip(fritz_texts, [0.9, 0.95, 0.99]):
+    fritz_encoding = create_encoding(text_list=prompt, img_list=fritz_imgs_cropped, args=args, text_weight=w)
+    run(encoding=fritz_encoding, args=args)
+    
+for prompt in fritz_texts:
+    run(text=prompt, args=args, iterations=2000)
+    
+for prompt in fritz_texts:
+    run(text=prompt, args=args, decay_cutout=1, iterations=2000)
+
+quit()
+
+for prompt in fritz_texts:
+    fritz_encoding = create_encoding(text_list=prompt, img_list=fritz_imgs_cropped, args=args, text_weight=0.8)
+    run(encoding=fritz_encoding, args=args)
+    
+for prompt in add_context(fritz_texts, suffix=". A black and white illustration."):
+    run(text=prompt, args=args)
+
+    
+for prompt in fritz_texts:
+    run(text=prompt, args=args, iterations=2000)
+    
+quit()
+
+# pure img mean
+#run(encoding=create_encoding(img_list=fritz_imgs, args=args), args=args)
+#run(encoding=create_encoding(img_list=fritz_imgs_cropped, args=args), args=args)
+
+# img mean + text
+#for prompt in fritz_texts:
+#    fritz_encoding = create_encoding(text_list=prompt, img_list=fritz_imgs, args=args, text_weight=0.5)
+#    run(encoding=fritz_encoding, args=args)
+
+for prompt in fritz_texts:
+    fritz_encoding = create_encoding(text_list=prompt, img_list=fritz_imgs_cropped, args=args, text_weight=0.5)
+    run(encoding=fritz_encoding, args=args)
+    
+# pure text
+#for prompt in fritz_texts:
+#    run(text=prompt, args=args)
+
+for prompt in fritz_texts_ger:
+    run(text=prompt, args=args)
+    
+for prompt in add_context(fritz_texts, suffix=". A black and white illustrated adverstisement."):
+    run(text=prompt, args=args)
+
+
+quit()
 
 #run(text="David Bowie", args=args, neg_text=neg_text)
 
