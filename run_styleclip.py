@@ -241,7 +241,24 @@ satan_bw = add_context(fritz_satan, suffix=". A black and white illustration.")
 satan_fritzkola_ad = add_context(fritz_satan, suffix=". In the style of a fritzkola advertisement.")
 satan_fritzkola = add_context(fritz_satan, suffix=". Fritzkola.")
 
+for prompt in classics:
+    run(text=prompt, args=args)
+for prompt in classics:
+    run(text=prompt, args=args, decay_cutout=1)
+for prompt in classics:
+    run(text=prompt, args=args, averaging_weight=0)
+for prompt in classics:
+    run(text=prompt, args=args, averaging_weight=1)
+for prompt in classics:
+    run(text=prompt, args=args, averaging_weight=0, decay_cutout=1)
+for prompt in classics:
+    run(text=prompt, args=args, averaging_weight=1, decay_cutout=1)
 
+    
+    
+
+
+quit()
 
 args["iterations"] = 2000
 args["decay_cutout"] = 0
@@ -438,8 +455,6 @@ run(text="Logo of an A.I. startup named AdaLab", args=args)
 quit()
 
 prompt = "Internet"
-<<<<<<< HEAD
-
 
 quit()
 
@@ -450,14 +465,12 @@ run(text="Anime", args=args, neg_text=neg_text_2)
 quit()
 
 run(text=prompt, args=args, neg_text="AI-generated")
-=======
 run(text=prompt, args=args, neg_text="blurry")
 run(text=prompt, args=args, neg_text="ugly")
 
 
 
 quit()
->>>>>>> bf4bf980738157606357b08360524ecc353b64d7
 run(text=prompt, args=args, neg_text="artificially generated image")
 run(text=prompt, args=args, neg_text="cropped, watermarks")
 run(text=prompt, args=args, neg_text="anime")
