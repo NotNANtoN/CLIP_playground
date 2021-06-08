@@ -191,6 +191,8 @@ prank_comics = ["Take a picture of your bathroom and plaster it on your fridge."
 pinar_1 = ["quantum physics", "God", "The soul of the world", "unconditional love", "Spiritual teacher", "Spirituality", "Goddess of the world", "Anima Mundi", "Twilight state", "Children of god", "mama matrix most mysterious", "psychic", "the power of magic", "psilocybin", "shamanism", "non-human intelligence", "alchemy", "Amongst the elves", "non-duality", "duality", "metaphysical sensitivity"]
 
 neg_text = 'incoherent, confusing, cropped, watermarks'
+neg_text_2 = 'incoherent, confusing, cropped, watermarks, anime'
+
 
 def add_context(words, prefix="", suffix=""):
     return [prefix + word + suffix for word in words]
@@ -198,7 +200,49 @@ def add_context(words, prefix="", suffix=""):
 args["early_stopping_steps"] = 200
 args["use_tv_loss"] = 1
 
+args["decay_cutout"] = 1
+args["neg_text"] = neg_text
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+quit()
+
+args["neg_text"] = neg_text
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+args["neg_text"] = neg_text_2
+run(text="H R Giger", args=args)
+run(text="Rainforest", args=args)
+run(text="Night club", args=args)
+run(text="seascape painting", args=args)
+run(text="Flowing water", args=args)
+run(text="Internet", args=args)
+run(text="Logo of an A.I. startup named AdaLab", args=args)
+
+quit()
+
 prompt = "Internet"
+
+
+quit()
+
+run(text="Tiamat", args=args, neg_text=neg_text_2)
+
+quit()
+run(text="Anime", args=args, neg_text=neg_text_2)
+quit()
+
 run(text=prompt, args=args, neg_text="AI-generated")
 run(text=prompt, args=args, neg_text="artificially generated image")
 run(text=prompt, args=args, neg_text="cropped, watermarks")
