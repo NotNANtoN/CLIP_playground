@@ -16,7 +16,7 @@ sys.path.append("../StyleCLIP_modular")
 from style_clip import Imagine, create_text_path
 
 
-def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
+def run(text=None, img=None, encoding=None, name=None, audio=None, args=None, **kwargs):
     if args is None:
         args = {}
     args = copy.copy(args)
@@ -24,12 +24,14 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
         args[key] = kwargs[key]
 
     img_name = img.split("/")[-1] if img is not None else None
-    input_name = create_text_path(text=text, img=img_name, encoding=encoding, context_length=77)
+    input_name = create_text_path(text=text, img=img_name, encoding=encoding, context_length=77, audio=audio)
     
     # switch to own folder
     original_dir = os.getcwd()
     time_str = time.strftime("%Y-%m-%d_%H:%M:%S", time.gmtime())
     model_type = args["model_type"]
+    if model_type == "vqgan":
+        model_type += str(args["codebook_size"])
     if model_type == "stylegan":
         remove = ["(", " ", ")", "/", "-", "[", "]"]
         style = args["style"].split("/")[-1].split(".")[0]
@@ -38,22 +40,26 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
         name = os.path.join("style_clip", str(style), time_str + "_" + input_name)
     else:
         name = os.path.join(model_type, time_str + "_" + input_name)
+    name = os.path.join("generations", name)
     os.makedirs(name, exist_ok=True)
     # copy start image to folder
     args = dict(args)
     if "start_image_path" in args:
         shutil.copy(args["start_image_path"], name)
     # copy image for feature extraction to folder
-    if img is not None and isinstance(img, str):
-        img_new_name = img.split("/")[-1] # only take end path
-        remove_list = [")", "(", "[", "]", '"', "'"]
-        for char in remove_list:
-            img_new_name = img_new_name.replace(char, "")
-        shutil.copy(img, os.path.join(name, img_new_name))
-        img = img_new_name
+    #if img is not None and isinstance(img, str):
+    #    img_new_name = img.split("/")[-1] # only take end path
+    #    remove_list = [")", "(", "[", "]", '"', "'"]
+    #    for char in remove_list:
+    #        img_new_name = img_new_name.replace(char, "")
+    #    shutil.copy(img, os.path.join(name, img_new_name))
+    #    img = img_new_name
 
     try:        
-        imagine = Imagine(
+        imagine = Imagine(text=text,
+            img=img,
+            clip_encoding=encoding,
+            audio=audio,
             save_progress=True,
             open_folder=False,
             save_video=True,
@@ -69,11 +75,11 @@ def run(text=None, img=None, encoding=None, name=None, args=None, **kwargs):
 
         os.chdir(name)
         
-        imagine.set_clip_encoding(text=text,
-            img=img,
-            encoding=encoding,
-            neg_text=args["neg_text"] if "neg_text" in args else None,
-        )
+        #imagine.set_clip_encoding(text=text,
+        #    img=img,
+        #    encoding=encoding,
+        #    neg_text=args["neg_text"] if "neg_text" in args else None,
+        #)
         
         # save hyperparams:
         save_args = copy.copy(args)
@@ -143,7 +149,14 @@ parser.add_argument("--style", default="../stylegan2-ada-pytorch/VisionaryArt.pk
 parser.add_argument("--lr_schedule", default=0, type=int)
 parser.add_argument("--start_image_steps", default=1000, type=int)
 parser.add_argument("--iterations", default=100, type=int)
-
+parser.add_argument("--codebook_size", default=1024, type=int)
+parser.add_argument("--run", default=None)
+parser.add_argument("--model_type", default="vqgan")
+parser.add_argument("--num_layers", default=44, type=int)
+parser.add_argument("--hidden_size", default=256, type=int)
+parser.add_argument("--sideX", default=480, type=int)
+parser.add_argument("--sideY", default=480, type=int)
+parser.add_argument("--lr", default=0.1, type=float)
 
 #parser.add_argument("--seed")
 
@@ -158,7 +171,7 @@ def run_from_file(path, **args):
     # filter empty
     texts = [text for text in texts if len(text) > 0]
     # filter comments
-    texts = [text for text in texts if text[0] != "#"]
+    texts = [text for text in texts if not text.startswith("#")]
     
     for text in texts:
         run(text=text, **args)
@@ -195,20 +208,38 @@ args["seed"] = 1
 dalle_prompts = ["an armchair in the shape of an avocado, an armchair imitating an avocado", "A painting in cubist style of a capybara sitting in a forest at sunrise", "a lamp in the shape of a pikachu, a lamp imitating a pikachu", "a fox made of voxels sitting on a mountain"]
 
 
-args["style"] = "../stylegan2-ada-pytorch/vint_retro_scifi_3200_2map.pkl"
 
 #run(text="An alien", args=args, iterations=50)
 
-args["model_type"] = "vqgan"
+#args["model_type"] = "vqgan"
 args["save_every"] = 20
 args["start_img_loss_weight"] = 0.0
 args["start_image_steps"] = 500
-args["lr"] = 0.1
-args["sideX"] = 1080
-args["sideY"] = 720
-args["batch_size"] = 32
+#args["lr"] = 0.1
+#args["sideX"] = 480
+#args["sideY"] = 480
+#args["batch_size"] = 32
 args["iterations"] = 1500
 # codebook_size = 1024, # [1024, 16384]
+
+
+
+
+run_text = args.pop("run")
+if run_text is not None and run_text != "":
+    run(text=run_text, args=args)
+    quit()
+
+
+old_ones = ["A climber climbing a large mountain", "A monkey painting a painting", "An image of a dog having a spiritual experience", "Being born", "The process of dying", "Surfing a big wave in the ocean", "The all-seeing tree", "The blue all-seeing tree. A blue tree with a large eye in its stem", "The scream by Edvard Munch", "Demon", "Entering the gates of heaven", "Meeting God", "Satan", "The final judgement", "Demon", "The most beautiful painting", "The most ugly painting", "A beautiful person", "A criminal", "A cute person", "An ugly person", "A photo of a criminal", "A photo of a terrorist", "A poor person", "A rich person"]
+
+#for p in old_ones:
+#    run(text=p, args=args)
+
+# mfn: 12 layers - lr=5e-4
+# siren: 44 layers - lr=1e-5
+#for p in old_ones:
+#    run(text=p, args=args, sideX=256, sideY=256, batch_size=16, model_type="mfn", num_layers=12, hidden_size=256, lr=5e-4)
 
 classics = ["A man painting a red painting.", "A wizard in blue robes is painting a red painting in a castle", "A psychedelic experience on LSD.", "Schizophrenia", "Depression", "Love"]
 religion_gpt = ["Above, in its brilliance, a solitary sun spins once again, burned, to slow the pace of the shifting sea of Nature. Above, the gods sing as if they are from the infinite.", "The bark of another corpse bleeds with the blood of our bond, this one rotted and long forgotten. The entire God of the Sacrifice looks down upon our abode, a drowning world that is us.", "As you chant, so I weave my voice. I craft my strings of fire, I fill the world with my own sweet sound. The stars themselves, the ends of the land, the wind, even the place where the light goes out all bend to worship me.", "Our hearts are hard and our bodies are weak. Our mind is a temple of madness. To tear it down is to destroy the seeds of our own transformation. We cannot kill our darkness. It is within us, waiting to be liberated. The folly of the human spirit.", "The oceans are my delights, and as I sleep in them my children lie with me in dreams of pure light. Their mother is my constant and eternal sleep. Not of her own will, but by her own will. I have no desire to enter the lake of shadow. Not in the dusk, not when the shades bleed.", "The infinite regress of illusion is the shortest path to nothingness. The void is the core of the matter of illusion. The void is eternal and unmoving. All our movements are reflections of ourselves in a mirror.", "We are nothing more than a million dreamers entwined in an infinite dream, completely unaware of our own identities. When the tentacles of the dream begin to stir, we wake up.", "A thousand worlds died. The best of them will live on. But only in infinite circles. Forever and ever. Except we are not the best of them. We are not the creams-of-life of the understanding.", "Each of our mortal experiences is just one more system of realization of a theme determined by our inherited molecular-cellular code.", "The godheads who dare not study the law of the unknown whispered in my ears to put me in an architect-work of my own to predict the unknown. It was too much work for my ignorant eyes.", "Your vision is weakened by the path of sin, which will not leave you until you repent. Your hatred of God is deep. You fear to kneel before God, lest you be stained with his blood.", "It is easy to be sane in a castle surrounded by walls. It is easy to be sane in the company of friends. It is easy to be sane in the company with trappings of royalty. It is easy to be sane in the garden. To be sane in the company of gods is to be roundly miserable."]
@@ -240,6 +271,1196 @@ satan_comics = add_context(fritz_satan, suffix=". Comic.")
 satan_bw = add_context(fritz_satan, suffix=". A black and white illustration.")
 satan_fritzkola_ad = add_context(fritz_satan, suffix=". In the style of a fritzkola advertisement.")
 satan_fritzkola = add_context(fritz_satan, suffix=". Fritzkola.")
+
+
+fritz_satan_subj = ["Satan creates plastic bottles", "Satan makes plastic bottles", "Satan poops plastic bottles", "Satan has plastic bottles coming out of his butt"]
+fritz_satan_subj_bw = add_context(fritz_satan_subj, suffix=". A black and white illustration.")
+fritz_satan_subj_comic = add_context(fritz_satan_subj, suffix=". Comic.")
+fritz_alien = ["Plastic bottles are brought by alien invasors", "Plastic bottles come from alien invasors", "An alien shoots humans with a plastic bottle", "An alien zaps humans with a plastic bottle."]
+fritz_alien_comic = add_context(fritz_alien, suffix=" .Comic.")
+fritz_alien_desc = ["A laughing alien shoots a human, using a plastic bottle as a gun.", "An alien shoots a human, using a plastic bottle as a gun.", "An alien uses a plastic bottle as a gun to shoot a human.", "An evil, laughing alien with a plastic bottle.", "An evil, laughing alien is standing next to a plastic bottle"]
+
+
+args["iterations"] = 2000
+args["save_every"] = 20
+args["averaging_weight"] = 0
+
+args["decay_cutout"] = 0
+
+
+
+pride_prompts = ["Pride month", "Pride", "Be who you are!", "Be who you are. Trending on artstation", "A football stadium colored in rainbow colors", "A football stadium colored in rainbow colors in support for the LGBTQ+ community", "People dancing in rainbows", "A painting of People dancing in rainbows", "People dancing in rainbows. Trending on artstation.", "Fight for your rights to express yourself!", "Fight for your rights to express yourself! A painting.", "Fight for your rights to express yourself! Trending on artstation"]
+    
+ai_art_prompts = ["Using artificial intelligence to create art.", "Using artificial intelligence to create art. A painting", "Using artificial intelligence to create art. Trending on artstation", "Using artificial intelligence to create art. Trending on reddit.", "Artificial intelligence is creative", "Using artificial intelligence as an artistic instrument", "Using artificial intelligence as an artistic instrument. A painting", "Using artificial intelligence as an artistic instrument. Trending on artstation"]
+lilli_geschenk = ["A voucher for a vibrator", "A voucher for a dildo", "A voucher for a vibrating dildo", "A voucher for a colourful dildo"]
+lilli_geschenk_2 = ["A gift card for a dildo", "A gift card for a dildo", "A dildo voucher", "A vibrator voucher", "A dildo gift card", "A 40€ voucher for a dildo", "A 40€ gift card for a dildo", "A gift card for a dildo, gifted by students"]
+
+#late_night_prompts = [#'A beautiful logo that reads "Encourage Consulting"', 'A beautiful logo that has "Encourage Consulting" written on it', "Encourage. Consulting. Logo.", 
+#late_night_prompts = ["A logo of a psychological personal coach.", "An amazing logo of a psychological personal coach.", "Psychological personal coaching", 
+late_night_prompts = ["Female Psychological personal coaching", "Being coached by an expert psychologist", "Being born", "The process of dying", "The reaper harvests souls, one after the other", "Non-duality", "Death. Trending on artstation", "The Reaper. Trending on artstation", "A beautiful woman named Anna is playing spike ball", "Anna is playing spike ball", "Anna is playing spike-ball", "Anna is playing spike ball with her grandmother", "Anna and her grandmother are playing spike ball", "Anna and her grandmother are playing spike ball at the beach"]
+sayings = ["Life isn’t about waiting for the storm to pass. It’s about dancing in the rain.", " A blessing in disguise", "Give someone the benefit of the doubt", "Let someone off the hook", "No pain, no gain", "No pain, no gain. Impressionist painting", "No pain, no gain. Expressionist painting", " Speak of the devil", "The best of both worlds", "A bird in the hand is worth two in the bush", "A perfect storm", "Costs an arm and a leg", "Comparing apples to oranges", "Every cloud has a silver lining", "Get a taste of your own medicine", " It takes one to know one", "Play devil's advocate", "Spill the beans", "Take it with a grain of salt", "The devil is in the details", "You can't judge a book by its cover", "Don't beat a dead horse", " He who laughs last laughs loudest", "Make hay while the sun shines", "Once bitten, twice shy", "When it rains it pours", "You can lead a horse to water, but you can't make him drink", "You can catch more flies with honey than you can with vinegar"]
+ak_custom_prompts = ["Vector quantized generative adversarial network", "An alligator character with a cutoff shirt posing in a fron double biceps. In the style of a Disney cartoon.", "Octopus attacking a hard of mules in the style of Wayne Gretzky", "colorless green ideas sleep furiously", "Sick half pipe 360 in the style of Beksinksi", "Robot reading deep lerning papers", "Research paper which solves General artificial intelligence", "Dog wearing pants", "I look at myself in the mirror", "Artstation. Trendin gon Unreal engine", "Starbucks on the moon surrounded by nebulas"]
+
+#for p in ["A blonde girl and her grandmother are playing with a spiky ball at the beach", "The soul leaves the body and transcends dimensions", "The fourth dimension", "Procrastination", "Uhhhm yeah.", "I have no idea", "What is this???", ":-)", ":-()", ":D", "The singularity"]:
+#    run(text=p, args=args)
+
+#for p in ["My dad with a new smartphone!", "How do I use this smartphone?!", "Wow, a new smartphone for my birthday???", "A birthday smartphone"]:
+#    run(text=p, args=args)
+
+
+strong_adjectives = ["Oneness", "Unity", "Non-duality", "Pureness", "purity", "independence", "freedom", "life", "the meaning of life", "Mind-bending", "Shocking", "Awe-inspiring", "Unbelievable", "Mind-boggling", "Exhilarating", "Electrifying", "Mesmerizing", "Earth-shattering", "Weird", "Catastrophical", "Apocalyptical", "Soul-shattering", "Tempostuous", "passionate", "torrid", "soulful", "ardent", "impassioned", "hysterical"]
+
+cool_prompts = ["do unto others as you would have them do unto you", "Looking back", "Meditative peace in a sunlit forest.", "Gödel, Escher, Bach", "Supernova", "Ecstacy","Boundless ego", "Oceanic boundlessness", "Home", "Wanderlust"]
+
+football_imgs = ["When it rains, it pours", "A perfect storm", "Don't beat a dead horse", "You can't judge a book by its cover", "Spill the beans"]
+nlu_impossible = ["tree", "Tree is a perennial plant, a biological type, with an elongated stem, or trunk, with supporting branches and leaves.", "The trophy did not fit in the suitcase because it was too big", "The trophy did not fit in the suitcase because it was too small", "Hey Joe, the loud omelet wants another beer", "The white house rebuked the threatening statements north korea made.", "I like to play bridge", "Mary enjoyed the movie", "Mary enjoyed the sandwich", "BBC has a reporter in every country", "John had pizza with his kids", "John had a pizza with pineapple", "The corner table wants another beer", "Don't worry about Simon, he's a rock", "John works in the neighbourhood store", "John works in the computer store"]
+
+
+def multi(prompt_list, *args, **kwargs):
+    for p in prompt_list:
+        run(text=p, *args, **kwargs)
+        
+# FLORKA
+args["rand_convex"] = False
+args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50"]
+args["lr"] = 0.03
+args["batch_size"] = 4
+args["iterations"] = 2000
+
+
+# prompts
+dnd_land = ["A goblin", "A goblin. DnD style", "A goblin. Dungeons-and-dragons style", "A goblin. Epic creature", "Vampire lord", "Count Strahd von Zarovich is a vampire lord, who rules over the valley of Barovia. Ages ago he made a pact with the Dark Powers of the Shadowfell, granting him immortality. However, it turned him into a vampire, and the valley became his prison from which he can never escape.", "Tiamat", "The Dragon Goddess of Greed, Queen of Evil Dragons, all time enemy of Bahamut and servant of Asmodeus, the great Tiamat. She has a head of each main chromatic dragon type, which is able to cooperate, and fight together. She is a hateful and greedy dragon. It’s safe to say Tiamat is a foe to be reckoned with in battle.", "Orcus", "Orcus is the Master of the Undead. He does not care about anybody, not even his servants. His intentions are to spread evil, death and misery only. He is in possession of powerful artifacts, and weapons that make him even more dangerous."]
+animal_land = ["A cute dog", "A cute dog", "A cute puppy with large eyes"]
+future_land = ["An epic utopian futuristic city, integrated in nature", "An illustration of people sleeping in cryogenic pods.", "People sleeping in cryogenic pods"]
+beach_marriage_land = ["An orca marriage at the beach", "Two orcas marrying at the beach"]
+couch_cuddle_land = ["A beautiful couch where a couple can cuddle and relax", "The most comfortable cuddle area"]
+
+root_folder = "base_images/florka_bilder/"
+florka_imgs = [root_folder + img for img in os.listdir(root_folder) if img.endswith(".jpeg") or img.endswith(".png")]
+#print(florka_imgs)
+
+dnd_2 = ["Dungeons and Dragons", "A dragon", "A portal to a different dimension", "A drow", "A tiefling", "A dragonborn"]
+animal_2 = ["A mass of puppies with large eyes", "Cute puppies", "The cutest image I have ever seen!", "This animal is so cute!", "Baby apes", "Baby dolphins", "Baby kittens", "Kittens"]
+future_2 = ["A rocket", "Elon Musk", "A beautiful city", "A skyline", "A city embedded in nature", "Spaceships", "rockets", "Laser guns", "Sci-fi", "Cyberpunk", "Neon cyberpunk", "Cyberpunk Utopia", "Life on mars", "A mars base", "A human base on mars", "Mars"]
+beach_marriage_2 = ["A beautiful marriage on a small island in a lighthouse", "A beautiful marriage on the beach next to a lighthouse", "Beach marriage next to the lighthouse", "A beach marriage. Caspar David Friedrich."]
+cuddle_2 = ["A couple cuddling in the most comfortable couch ever!", "This is so comfortable!", "Super comfy!"]
+
+cool_sayings = ["The whole is more than the sum of its parts", "Together, forever"]
+funny_marriage_sayings = ["When a man opens a car door for his wife, it’s either a new car or a new wife.", "My most brilliant achievement was my ability to be able to persuade my wife to marry me.", "If I get married, I want to be very married.", "By all means marry; if you get a good wife, you’ll become happy; if you get a bad one, you’ll become a philosopher.", "An archaeologist is the best husband a woman can have. The older she gets, the more interested he is in her.", "Marriage lets you annoy one special person for the rest of your life.", "Marriage is not just spiritual communion, it is also remembering to take out the trash."]
+love_marriage_sayings = ["A successful marriage requires falling in love many times, always with the same person.", "A great marriage is not when the ‘perfect couple’ comes together. It is when an imperfect couple learns to enjoy their differences.", "Never marry the one you can live with, marry the one you cannot live without.", "A good marriage is one which allows for change and growth in the individuals and in the way they express their love.", "Marriage is not about age; it’s about finding the right person.", "Experts on romance say for a happy marriage there has to be more than a passionate love. For a lasting union, they insist, there must be a genuine liking for each other. Which, in my book, is a good definition for friendship."]
+
+own_sayings = ["The whole is greater than the sum of its parts", "Everlasting love", "Cheesy love", "Cheesy"]
+
+makeai_art = ["A painting of a monkey getting a haircut", "a microscopic German Shepherd dog", "olympic monkey wrestling for team GB", "a monkey swimming in the olympics"]
+
+
+mama_tango_teacher = ["Psychologisch gesund führen mit weiblicher Energie!", "Leading psychologically healthy with female energy!", "Female effective & psychologically healthy leadership style", "From quota woman to quota hit", "From quota woman to quota hit with Tango technology", "From quota woman to quota hit with Tango technique"]
+
+cake = ["A uniborn cake", "A uniborn", "A unicorn cake", "A cake in the shape of a unicorn", "A cake in a unicorn theme", "A cake made of unicorn flesh", "Wow Mum! This cake looks like a unicorn!", "Just give me a tasty and coherent-looking unicorn cake please goddammit..."]
+
+deepdaze_prompts = ["mist over green hills", "shattered plates on the grass", "cosmic love and attention", "time traveler in the crowd", "life during the plague", "meditative peace in a sunlit forest", "a man painting a completely red image", "a psychedelic experience on LSD"]
+
+
+nice_landscape= "A watercolor landscape with the sun over mountains covered in trees"
+
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["model_type"] = "image"
+args["sideX"] = 512
+args["sideY"] = 512
+args["iterations"] = 500
+args["lr"] = 0.005
+args["batch_size"] = 32
+args["stack_size"] = 1
+#multi(deepdaze_prompts, args=args)
+args["stack_size"] = 2
+#multi(deepdaze_prompts, args=args)
+args["stack_size"] = 4
+#multi(deepdaze_prompts, args=args)
+args["stack_size"] = 6
+#multi(deepdaze_prompts, args=args)
+
+args["model_type"] = "image"
+args["sideX"] = 1024
+args["sideY"] = 1024
+args["stack_size"] = 8
+#multi(deepdaze_prompts, args=args)
+#run(text=nice_landscape, args=args)
+
+args["model_type"] = "conv"
+args["lr_schedule"] = 1
+args["lr"] = 0.005
+args["num_channels"] = 3
+args["num_layers"] = 5
+args["batch_size"] = 32
+args["act_func"] = "gelu"
+args["downsample"] = True
+args["norm_type"] = "layer"
+args["stride"] = 1
+#run(text=nice_landscape, args=args)
+
+
+args["stack_size"] = 6
+#multi(deepdaze_prompts, args=args)
+
+args["model_type"] = "siren"
+args["lr"] = 1e-5
+args["num_layers"] = 8
+args["hidden_size"] = 256
+args["mini_batch_size"] = 0
+args["sideX"] = 256
+args["sideY"] = 256
+
+
+args["stack_size"] = 1
+#run(text=nice_landscape, args=args)
+
+args["stack_size"] = 6
+#run(text=nice_landscape, args=args)
+
+args["stack_size"] = 1
+args["num_layers"] = 44
+args["hidden_size"] = 256
+args["batch_size"] = 4
+#run(text=nice_landscape, args=args)
+
+
+args["model_type"] = "siren"
+args["lr"] = 1e-5
+args["num_layers"] = 44
+args["hidden_size"] = 256
+args["mini_batch_size"] = 0
+args["sideX"] = 256
+args["sideY"] = 256
+
+args["iterations"] = 500
+args["rand_convex"] = False
+
+args["clip_names"] = ["ViT-B/32"]
+args["batch_size"] = 16
+args["gradient_accumulate_every"] = 4
+#multi(deepdaze_prompts, args=args)
+
+
+args["iterations"] = 2000
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 8
+args["num_layers"] = 32
+multi(strong_adjectives, args=args)
+multi(cool_prompts, args=args)
+
+
+args["model_type"] = "image"
+args["sideX"] = 1024
+args["sideY"] = 1024
+args["stack_size"] = 7
+args["lr"] = 0.005
+args["batch_size"] = 64
+multi(strong_adjectives, args=args)
+multi(cool_prompts, args=args)
+
+quit()
+args["clip_names"] = ["ViT-B/32"]
+args["batch_size"] = 4
+multi(deepdaze_prompts, args=args)
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 4
+args["gradient_accumulate_every"] = 4
+multi(deepdaze_prompts, args=args)
+
+quit()
+args["rand_convex"] = False
+args["clip_names"] = ["ViT-B/32"]
+args["batch_size"] = 16
+multi(deepdaze_prompts, args=args)
+
+args["batch_size"] = 4
+multi(deepdaze_prompts, args=args)
+
+quit()
+args["rand_convex"] = False
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 4
+multi(deepdaze_prompts, args=args)
+
+#multi(strong_adjectives, args=args)
+#multi(cool_prompts, args=args)
+
+
+quit()
+
+
+
+multi(cake, args=args)
+
+
+quit()
+
+# didnt work yet!
+args["start_image_path"] = "white"
+args["start_img_loss_weight"] = 0.0
+multi(own_sayings, args=args)
+
+quit()
+
+multi(mama_tango_teacher, args=args)
+multi(own_sayings, args=args)
+multi(add_context(mama_tango_teacher, suffix=" A logo."), args=args)
+multi(add_context(mama_tango_teacher, suffix=" A logo. Velvia."), args=args)
+multi(add_context(mama_tango_teacher, suffix=" A logo. Velvet"), args=args)
+multi(add_context(mama_tango_teacher, suffix=" A dynamic logo."), args=args)
+multi(add_context(mama_tango_teacher, suffix=" A painting."), args=args)
+multi(add_context(own_sayings, suffix=" A painting."), args=args)
+
+
+#run(text="Don't worry about simon, he's a rock.", args=args)
+#multi(nlu_impossible, args=args, iterations=1000)
+#multi(cool_prompts, args=args)
+#multi(funny_marriage_sayings, args=args)
+#multi(love_marriage_sayings, args=args)
+#multi(add_context(funny_marriage_sayings, prefix="A painting of the saying: "), args=args)
+#multi(add_context(love_marriage_sayings, suffix=" A matte painting."), args=args)
+
+
+
+#multi(makeai_art, args=args)
+
+#multi(add_context(future_2, prefix="A futuristic illustration of "), args=args)
+
+
+
+
+
+args["codebook_size"] = 8192 * 2
+
+  
+
+#multi(add_context(dnd_2, prefix="A painting of "), args=args)
+#multi(add_context(animal_2, prefix="A painting of "), args=args,)
+#multi(add_context(future_2, prefix="A futuristic illustration of "), args=args)
+#multi(add_context(beach_marriage_2, prefix="A painting of "), args=args)
+#multi(add_context(cuddle_2, prefix="A painting of "), args=args)
+
+
+quit()
+
+args["codebook_size"] = 8192
+args["iterations"] = 100
+args["sideX"] = 448
+args["sideY"] = 448
+args["save_every"] = 5
+args["lr"] = args["lr"] * 0.5
+args["start_img_loss_weight"] = 0.5
+args["neg_text"] = None
+cheek = florka_imgs[2]
+
+#run(start_image_path=cheek, text="Pure fire, hell", args=args)
+#run(start_image_path=cheek, text="A couple at a marriage", args=args)
+
+ja = florka_imgs[5]
+#run(start_image_path=ja, text="A happy couple marrying with balloons saying 'JA'", args=args, img=ja)
+
+beach = florka_imgs[-1]
+
+#run(start_image_path=beach, text="Beach party!", args=args)
+
+
+
+#run(start_image_path=beach, img=beach, args=args)
+
+#run(start_image_path=beach, img=beach, text="A lovely day at the beach", args=args)
+
+#run(img=beach, text="A lovely day at the beach", args=args)
+
+#run(start_image_path=beach, text="A lovely day at the beach", args=args)
+
+
+#run(start_image_path=beach, img=beach, minus_text="", args=args)
+
+
+
+#run(start_image_path=florka_imgs[2], text="A man kissing a woman on the cheek. They are frozen in ice", img=florka_imgs[2], args=args)
+
+#run(start_image_path=florka_imgs[2], text="A man kissing a woman on the cheek. They are frozen in ice", args=args, start_img_loss_weight=2)
+
+
+    
+#for i in florka_imgs[:2]:
+#    print(i)
+#    run(start_image_path=i, text="A cute couple in love", args=args, lr=args["lr"] * 0.5, #start_img_loss_weight=0.5)
+    
+#for i in florka_imgs[:2]:
+#    run(img=i, args=args)
+
+quit()
+
+# three models
+multi(add_context(dnd_land, prefix="A painting of "), args=args)
+# two models
+multi(add_context(dnd_land, prefix="A painting of "), clip_names=["ViT-B/16", "ViT-B/32"], batch_size=8, args=args)
+#multi(dnd_land, clip_names=["ViT-B/32"], batch_size=8, args=args)
+#multi(dnd_land, clip_names=["ViT-B/16"], batch_size=8, args=args)
+
+# rest
+#multi(animal_land, args=args)
+multi(add_context(future_land, prefix="A painting of "), args=args)
+multi(add_context(beach_marriage_land, prefix="A painting of "), args=args)
+multi(add_context(couch_cuddle_land, prefix="A painting of "), args=args)
+
+
+quit()
+
+args["iterations"] = 1000
+
+#  test neutral and minus text in comparison to neg text
+
+#for p in football_imgs:
+#    run(text=p, args=args)
+
+args["neg_text"] = None
+#for p in football_imgs:
+#    run(text=p, args=args)
+
+args["minus_text"] = "A cropped image"
+args["neutral_text"] = "An image"
+#for p in football_imgs[1:]:
+#    run(text=p, args=args)
+    
+    
+args["minus_text"] = "A cropped, confusing, incoherent, watermarked image"
+#for p in football_imgs[3:]:
+#    run(text=p, args=args)
+
+args["neutral_text"] = None
+#for p in football_imgs:
+#    run(text=p, args=args)
+    
+neg_text_3 = 'incoherent, confusing, cropped, watermarks, anime-style, cartoon-style, football-player, jersey'
+args["neg_text"] = neg_text_3
+args["minus_text"] = None
+#for p in football_imgs:
+#    run(text=p, args=args)
+
+# metaphoical sayings
+args["neg_text"] = neg_text
+#for p in ["The metaphorical meaning of: " + s for s in sayings]:
+#    run(text=p, args=args)
+    
+    
+# test some strong adjectives and asking for the "meaning" of words/adjectives:
+args["rand_convex"] = False
+args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50"]
+args["lr"] = 0.03
+args["batch_size"] = 4
+
+#for p in ["The first dimension", "The second dimension", "The third dimension", "The fourth dimension", "The fifth dimension", "The soul leaves the body and transcends dimensions", "The soul leaves the body", "A painting of the soul leaving the body", "Transcending dimensions", "The meaning of life", "A painting displaying the meaning of life", "A shaman", "A painting of a shaman", "Behemoth", "Leviathan", "Polaris", "Vell-os", "A goblin", "A painting of a vampire", "A portrait of a vampire", "A titan", "Unrelentless power", "Pure destruction", "The source of the universe", "The source of all energy", "A ball made of pure energy", "A portal to a different dimension", "Anton", "Anton Wiehe", "Anna", "Anna Methner", "AdaLab", "A startup named 'AdaLab'"]:
+#    run(text=p, args=args)
+
+#for p in strong_adjectives:
+#    run(text=p, args=args)
+    
+#for p in ["This painting is: " + adjective for adjective in strong_adjectives]:
+#    run(text=p, args=args)
+    
+#for p in ["This painting represents the meaning of: " + adjective for adjective in strong_adjectives]:
+#    run(text=p, args=args)
+
+#for p in ["This hyperrealistic rendering represents the meaning of: " + adjective for #adjective in strong_adjectives]:
+#    run(text=p, args=args)
+
+
+#for p in ["This colourful illustration represents the meaning of of: " + adjective for adjective in strong_adjectives]:
+#    run(text=p, args=args)
+
+
+args["neg_text"] = None
+#for p in ["This painting represents the meaning of: " + adjective for adjective in strong_adjectives]:
+#    run(text=p, args=args)
+    
+#run(text=neg_text, args=args)
+#run(minus_text=neg_text, args=args)
+
+args["lr"] = 0.1
+args["clip_names"] = ["ViT-B/16"]
+args["batch_size"] = 8
+#run(text=neg_text, args=args)
+#run(minus_text=neg_text, args=args)
+args["clip_names"] = ["ViT-B/32"]
+#run(text=neg_text, args=args)
+#run(minus_text=neg_text, args=args)
+
+    
+args["neg_text"] = neg_text
+ 
+    
+
+    
+#for p in ["A 40€ voucher for a dildo", "Florka", "Florian and Sirka", "Florian and Sirka = Florka", "A painting of an orca marrying", "A painting of an orca marriage", "An orca marriage", "Two orcas marrying"]:
+#    run(text=p, args=args)
+    
+#for p in ["How do I use this smartphone?!", "Wow, a new smartphone for my birthday???", "A birthday smartphone", "A smartphone on which you can play the game of Go"]:
+#    run(text=p, args=args)
+
+#for p in religion_gpt:
+#    run(text=p, args=args)
+
+quit()
+
+args["iterations"] = 200
+args["batch_size"] = 16
+
+args["clip_names"] = ["ViT-B/16"]
+#for p in classics:
+#    run(text=p, args=args, vqgan_start_img_path="white")
+
+#for p in ["Consciousness"]:
+#    run(text=p, args=args)
+#for p in sayings:
+#    run(text=p, args=args)
+
+args["clip_names"] = ["ViT-B/32"]
+
+#for p in ["Consciousness"]:
+#    run(text=p, args=args)
+#for p in ["test"]:
+#    run(text=p, args=args)
+
+args["batch_size"] = 8
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+
+#for p in ["Consciousness"]:
+#    run(text=p, args=args)
+#for p in sayings:
+#    run(text=p, args=args)
+
+#for p in classics:
+#    run(text=p, args=args)
+
+args["rand_convex"] = False
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50"]
+args["lr"] = 0.03
+args["batch_size"] = 4
+args["iterations"] = 2000
+#for p in classics:
+#    run(text=p, args=args)
+    
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 8
+#for p in classics:
+#    run(text=p, args=args)
+
+    
+
+args["rand_convex"] = True
+args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50"]
+args["lr"] = 0.03
+args["batch_size"] = 4
+#for p in ak_custom_prompts:
+#    run(text=p, args=args)
+    
+    
+args["lr"] = 0.1
+args["clip_names"] = ["ViT-B/32"]
+args["batch_size"] = 32
+#for p in ak_custom_prompts:
+#    run(text=p, args=args)
+    
+quit()
+
+    
+
+args["sideX"] = 256  # audioclip model is larger, 256 is nearly max size
+args["sideY"] = 256
+args["model_name"] = "audioclip"
+
+args["audio_len"] = 1
+args["neg_text"] = None
+args["batch_size"] = 8
+
+base_imgs = [os.path.join("base_images", p) for p in os.listdir("base_images") if p.endswith(".jpg") or p.endswith(".jpeg") or p.endswith(".png")]
+for p in base_imgs:
+    if os.path.isdir(p):
+        for subfile in os.listdir(p):
+            base_imgs.append(os.path.join(p, subfile))
+        base_imgs.remove(p)
+audio_prompts = ["A dog barking", "A cat meowing", "A man screaming", "A woman screaming", "Classical music", "Techno", "Guitar sounds", "Beautiful music"]
+
+args["model_type"] = "lstm_audio"
+args["lr"] = 0.0002
+args["audio_len"] = 5
+#run(text="Classical music", args=args)
+
+quit()
+
+args["model_type"] = "siren_audio"
+args["num_layers"] = 32
+args["hidden_size"] = 256
+args["lr"] = 5e-4
+#run(text="A dog barking", args=args)
+
+args["audio_channels"] = 2
+#run(text="A dog barking", args=args)
+
+
+quit()
+
+args["iterations"] = 500
+args["model_type"] = "vqgan"
+args["model_name"] = "ViT-B/32"
+#run(text="A dog barking", args=args)
+
+
+args["model_type"] = "stylegan"
+args["opt_raw"] = False
+args["lr"] = 0.01
+#run(text="A dog barking", args=args)
+
+args["opt_raw"] = True
+args["lr"] = 0.005
+#run(text="A dog barking", args=args)
+
+
+args["model_name"] = "ViT-B/32"
+args["model_type"] = "mfn"
+args["num_layers"] = 10
+args["hidden_size"] = 256
+#args["lr"] = 5e-4  # works nicely
+#run(text="A dog barking", args=args)
+#args["lr"] = 5e-3
+#run(text="A dog barking", args=args)
+
+args["model_type"] = "siren"
+#args["lr"] = 5e-3
+#run(text="A dog barking", args=args)
+#args["lr"] = 5e-4
+#run(text="A dog barking", args=args)
+#args["lr"] = 5e-5 # gives results...
+#run(text="A dog barking", args=args)
+args["lr"] = 1e-5
+run(text="A dog barking", args=args)
+args["lr"] = 5e-6
+run(text="A dog barking", args=args)
+quit()
+
+args["iterations"] = 2000
+args["model_type"] = "unagan_audio"
+args["lr"] = 1e-7#0.00001
+args["unagan_type"] = "singing"
+args["batch_size"] = 64
+run(text="A dog barking", args=args)
+
+quit()
+
+args["iterations"] = 2000
+args["model_type"] = "wavegrad_audio"
+args["lr"] = 0.0001
+run(text="A dog barking", args=args)
+
+quit()
+
+
+
+args["iterations"] = 2000
+args["model_type"] = "conv_audio"
+args["lr"] = 0.005 # 0.005 for stride==1
+args["num_channels"] = 8
+args["num_layers"] = 5
+args["batch_size"] = 8
+args["act_func"] = "relu"
+args["downsample"] = False
+args["norm_type"] = None
+args["stride"] = 1
+#run(text="A dog barking", args=args)
+#for p in audio_prompts:
+#    run(text=p, args=args)
+#for p in base_imgs:
+#    run(img=p, args=args)
+
+args["model_type"] = "raw_audio"
+args["lr"] = 0.005
+#for p in audio_prompts:
+#    run(text=p, args=args)
+#for p in base_imgs:
+#    run(img=p, args=args)
+
+
+
+args["model_type"] = "lstm_audio"
+args["lr"] = 0.0005
+#for p in audio_prompts:
+#    run(text=p, args=args)
+#for p in base_imgs:
+#    run(img=p, args=args)
+    
+
+
+args["model_type"] = "siren_audio"
+args["num_layers"] = 32
+args["hidden_size"] = 256
+args["lr"] = 5e-6
+# for imgs: lr=1e-5, num_layers=44, hidden_size=256
+for p in audio_prompts:
+    run(text=p, args=args)
+for p in base_imgs:
+    run(img=p, args=args)
+    
+   
+    
+quit()
+    
+args["model_type"] = "raw_audio"
+args["lr"] = 0.005
+run(text="A dog barking", args=args)
+
+
+#gnossienne_img = "vqgan1024/2021-06-29_21:16:11_your_encoding/your_encoding.jpg"
+#nadia_wuff_img = "vqgan1024/2021-06-29_22:13:33_nadia_wuff_/nadia_wuff_.jpg"
+#run(img=gnossienne_img, args=args)
+
+#run(text="A man screaming", args=args)
+
+quit()
+run(text="A man screaming", args=args)
+
+quit()
+
+import os
+
+
+song_path = "base_audios"
+songs = os.listdir(song_path)
+songs = [s for s in songs if s.endswith(".mp3") or s.endswith(".wav")]
+for s in songs:
+    print(s)
+    run(text=None, audio=os.path.join(song_path, s), args=args)
+
+quit()
+    
+lyric_song_path = "../lucid-sonic-dreams/songs_with_lyrics"
+songs = os.listdir(lyric_song_path)
+songs = [s for s in songs if s.endswith(".mp3")]
+
+#for s in songs:
+#    print(s)
+#    run(text=None, audio=os.path.join(lyric_song_path, s), args=args)
+    
+    
+song_path = "../lucid-sonic-dreams/songs"
+songs = os.listdir(song_path)
+songs = [s for s in songs if s.endswith(".mp3")]
+#for s in songs:
+#    print(s)
+#    run(text=None, audio=os.path.join(song_path, s), args=args)
+
+
+#run(text=None, audio="base_audios/nadia_wuff.wav", args=args)
+#run(text=None, audio="base_audios/me_speaking_test.wav", args=args)
+
+
+quit()
+
+four_k = ["landscape 4k", "forest 4k", "sea 4k", "blood 4k", "beauty 4k", "boobs 4k"]
+for k in four_k:
+    run(text=k, args=args)
+
+quit()
+
+for p in lilli_geschenk_2:
+    run(text=p, args=args)
+
+    
+args["latent_type"] = "code_sampling"
+for p in lilli_geschenk_2:
+    run(text=p, args=args)
+    
+quit()
+
+args["codebook_size"] = 8192
+args["sideX"] = 440  # 8192 model is a bit bigger, so 440 instead of 480
+args["sideY"] = 440
+
+args["lr"] = 0.05  # 2 times lower
+#for p in classics:
+#    run(text=p, args=args)
+
+# maybe we need a way lower learning rate for this model...
+args["lr"] = 0.01  # 10 times lower
+
+#for p in classics:
+#    run(text=p, args=args)
+    
+args["lr"] = 0.005  # 20 times lower
+#for p in classics:
+#    run(text=p, args=args)
+    
+# maybet this model works better with sampling!
+args["lr"] = 0.1  # 20 times lower
+args["latent_type"] = "code_sampling"
+#for p in classics:
+#    run(text=p, args=args)
+
+    
+args["latent_type"] = "code_sampling"
+args["lr"] = 0.01  # 10 times lower
+#for p in classics:
+#    run(text=p, args=args)
+
+quit()
+
+#run(text="A time-traveller in the crowd", args=args)
+#run(text="Life during the plague", args=args)
+
+# might need this
+#pip install omegaconf>=2.0.0 pytorch-lightning>=1.0.8 einops>=0.3.0
+
+
+run(text="A bisexual in the crowd", args=args)
+run(text="A queer person in the crowd", args=args)
+run(text="Colour in the crowd", args=args)
+run(text="A rainbow flag swaying in the wind", args=args)
+run(text="Pride month", args=args)
+run(text="Pride. Trending on artstation", args=args)
+run(text="Pride month. Trending on artstation", args=args)
+run(text="Gradient", args=args)
+run(text="Pure Madness", args=args)
+run(text="Madness", args=args)
+run(text="The smallest object in the universe", args=args)
+run(text="The largest object int he universe", args=args)
+run(text="The smallest object", args=args)
+run(text="The smallest object that exists", args=args)
+run(text="The largest object", args=args)
+run(text="THe largest object that exists", args=args)
+
+run(text="God, sitting on a cloud, is observing humans", args=args)
+run(text="The Devil himself", args=args)
+run(text="Life is meaningless", args=args)
+
+run(text="A roboter is painting using watercolors", args=args)
+run(text="An artist is being replaced by A.I.", args=args)
+run(text="An artist is replaced by a robot", args=args)
+run(text="A robot replaces an artist", args=args)
+run(text="A robot is more creative than an artist", args=args)
+run(text="A robot", args=args)
+run(text="An android", args=args)
+
+
+args["codebook_size"] = 8192
+args["sideX"] = 440  # 8192 model is a bit bigger, so 440 instead of 480
+args["sideY"] = 440
+
+#for p in classics:
+#    run(text=p, args=args)
+
+args["codebook_size"] = 1024
+for p in classics:
+    run(text=p, args=args)
+
+args["codebook_size"] = 16384
+for p in classics:
+    run(text=p, args=args)
+
+quit()
+
+run_from_file("poems/best_poems.txt", args=args, create_story=1, iterations=500, save_every=3)
+
+quit()
+
+
+for prompt in pride_prompts:
+    run(text=prompt, args=args)
+
+for prompt in ai_art_prompts:
+    run(text=prompt, args=args)
+
+    
+quit()
+
+run(text="Beksinski", args=args)
+run(text="visions of the future inside a crystal ball", args=args)
+run(text=' Fantasy forest painting called "Saga Flame" by Seb McKinnon, trending on Artstation.', args=args)
+run(text="Meditative peace in a sunlit forest.", args=args)
+run(text="Meditative peace in a sunlit forest. Trending on artstation.", args=args)
+quit()
+
+
+
+for p in fritz_alien:
+    run(text=p, args=args)
+
+for p in fritz_alien_desc:
+    run(text=p, args=args)
+    
+quit()
+
+
+for p in fritz_alien:
+    run(text=p, args=args, model_type="conv", num_layers=2, stride=2, act_func="gelu")
+    run(text=p, args=args, model_type="siren", lr=1e-5, num_layers=44, hidden_size=256, mini_batch_size =0, sideX=256, sideY=256)
+
+
+quit()
+
+for p in add_context(fritz_alien, suffix=" A movie poster."):
+    run(text=p, args=args)
+
+for p in add_context(fritz_alien, suffix=" An album cover."):
+    run(text=p, args=args)
+
+for p in add_context(fritz_alien, suffix=" An illustration."):
+    run(text=p, args=args)
+for p in add_context(fritz_alien, suffix=" An illustration of an alien."):
+    run(text=p, args=args)
+for p in add_context(fritz_alien, suffix=" In the style of Picasso."):
+    run(text=p, args=args)
+for p in add_context(fritz_alien, suffix=" A painting."):
+    run(text=p, args=args)
+
+
+quit()
+
+for prompt in fritz_alien:
+    run(text=prompt, args=args)
+
+for prompt in fritz_alien_comic:
+    run(text=prompt, args=args)
+
+#for prompt in fritz_satan_subj:
+#    run(text=prompt, args=args)
+    
+#for prompt in fritz_satan_subj_bw:
+#    run(text=prompt, args=args)
+    
+#for prompt in fritz_satan_subj_comic:
+#    run(text=prompt, args=args)
+    
+args["model_type"] = "conv"
+args["sideX"] = 480
+args["sideY"] = 480
+args["iterations"] = 1000
+args["lr_schedule"] = 1
+args["lr"] = 0.005 * (args["sideX"] * args["sideY"] / 480 / 480)
+args["num_channels"] = 3
+args["num_layers"] = 2
+args["batch_size"] = 32
+args["act_func"] = "gelu"
+args["downsample"] = True
+args["norm"] = "layer"
+
+
+def run_all(*args, **kwargs):
+    run(*args, **kwargs, model_type="conv", lr=0.005, num_channels=3, num_layers=2, act_func="gelu", downsample=True, norm="layer")
+
+    run(*args, **kwargs, model_type="siren", lr=1e-5)
+
+    run(*args, **kwargs, model_type="vqgan")
+
+    run(*args, **kwargs, model_type="stylegan")
+
+    run(*args, **kwargs, args=args, model_type="siren", lr=5e-5)
+
+args["iterations"] = 2000
+args["sideX"] = 1920
+args["sideY"] = 1080
+
+args["lr"] = 0.005 * (args["sideX"] * args["sideY"] / 480 / 480)
+
+run(text="A man painting a red painting. Single layer", args=args, model_type="conv", num_layers=1, stride=2, act_func="gelu", iterations=200)
+
+run(text="A man painting a red painting. Two layers", args=args, model_type="conv", num_layers=2, stride=2, act_func="gelu", iterations=200)
+for prompt in religion_gpt:
+    run(text=prompt, args=args, act_func="gelu", num_layers=1, stride=2, downsample=False)
+    
+for prompt in religion_gpt:
+    run(text=prompt, args=args, act_func="gelu", num_layers=1, stride=2, downsample=True)
+
+
+run(text="A man painting a red painting", args=args, model_type="siren", lr=1e-5, num_layers=44, hidden_size=256, mini_batch_size = 2 ** 16, sideX=720, sideY=576, iterations=200)
+for prompt in religion_gpt:
+    run(text=prompt, args=args, model_type="siren", lr=1e-5, num_layers=44, hidden_size=256, mini_batch_size = 2 ** 16, sideX=720, sideY=576)
+
+    
+quit()
+    
+run(text="A painting of a vampire", args=args, num_layers=5, downsample=True, stride=1, act_func="gelu") # 4.6 it/s 691000 params
+run(text="A painting of a vampire", args=args, num_layers=5, downsample=True, stride=1, act_func="relu") # 4.6 it/s 691000 params
+
+for prompt in classics:
+    run(text=prompt, num_layers=5, stride=1, act_func=None, args=args)
+
+for prompt in classics:
+    run(text=prompt, num_layers=5, stride=1, act_func="gelu", args=args)
+
+run(text="A painting of a vampire", args=args, num_layers=10, downsample=True, stride=1, act_func="gelu") # 4.6 it/s 691000 params
+run(text="A painting of a vampire", args=args, num_layers=10, downsample=True, stride=1, act_func="relu") # 4.6 it/s 691000 params
+
+
+run(text="A painting of a vampire", args=args, num_layers=10, num_channels=32, stride=1, act_func="gelu") # 4.6 it/s 691000 params
+run(text="A painting of a vampire", args=args, num_layers=10, num_channels=32, stride=1, act_func="relu") # 4.6 it/s 691000 params
+    
+quit()
+    
+run(text="A painting of a monster", args=args, num_layers=5, downsample=True, stride=1, act_func=None) # 4.6 it/s 691000 params
+run(text="A painting of a monster", args=args, num_layers=5, downsample=True, stride=1, act_func="gelu") # 4.6 it/s 691000 params
+run(text="A painting of a monster", args=args, num_layers=5, downsample=True, stride=1, act_func="relu") # 4.6 it/s 691000 params
+
+args["num_channels"] = 64
+run(text="A painting of a monster", args=args, num_layers=5, downsample=True, stride=1, act_func=None) # 4.6 it/s 691000 params
+run(text="A painting of a monster", args=args, num_layers=5, downsample=True, stride=1, act_func="gelu") # 4.6 it/s 691000 params
+run(text="A painting of a monster", args=args, num_layers=5, downsample=True, stride=1, act_func="relu") # 4.6 it/s 691000 params
+    
+quit()
+    
+run(text="A painting of a ghoul", args=args, num_layers=2, downsample=True, stride=1, act_func=None) # 4.6 it/s 691000 params
+run(text="A painting of a ghoul", args=args, num_layers=2, downsample=True, stride=1, act_func="gelu") # 4.6 it/s 691000 params
+run(text="A painting of a ghoul", args=args, num_layers=2, downsample=True, stride=1, act_func="relu") # 4.6 it/s 691000 params
+
+run(text="A painting of a ghoul", args=args, num_layers=2, downsample=True, stride=2, act_func=None) # 4.6 it/s 691000 params
+run(text="A painting of a ghoul", args=args, num_layers=2, downsample=True, stride=2, act_func="gelu") # 4.6 it/s 691000 params
+run(text="A painting of a ghoul", args=args, num_layers=2, downsample=True, stride=2, act_func="relu") # 4.6 it/s 691000 params
+    
+quit()
+    
+run(text="A painting of a ghoul", args=args, num_layers=5, downsample=True, stride=1, act_func=None) # 4.6 it/s 691000 params
+run(text="A painting of a ghoul", args=args, num_layers=5, downsample=True, stride=1, act_func="gelu") # 4.6 it/s 691000 params
+run(text="A painting of a ghoul", args=args, num_layers=5, downsample=True, stride=1, act_func="relu") # 4.6 it/s 691000 params
+
+quit()
+    
+    
+run(text="A painting of a monster", args=args, num_layers=5, downsample=True, stride=1, act_func=None) # 4.6 it/s 691000 params
+
+run(text="A painting of a monster", args=args, num_layers=5, downsample=True, stride=1, act_func="gelu") # 4.6 it/s 691000 params
+
+quit()
+    
+run(text="A painting of a vampire", args=args, num_layers=3, downsample=True, stride=1, act_func=None) # 4.6 it/s 691000 params
+
+    
+quit()
+    
+run(text="A painting of a vampire", args=args, num_layers=1, downsample=True, stride=1, act_func=None) # 4.6 it/s 691000 params
+
+quit()
+    
+run(text="Speed test - one layer, stride 1 - conv - no act func", args=args, num_layers=1, downsample=True, stride=1, act_func=None) # 4.6 it/s 691000 params
+
+quit()
+    
+run(text="Speed test - one layer, stride 1 - transpose conv", args=args, num_layers=1, downsample=False, stride=1) # 4.76 it/s 691281 2.7GB
+
+run(text="Speed test - one layer, stride 1 - conv", args=args, num_layers=1, downsample=True, stride=1) # 4.6 it/s 691000 params
+
+    
+quit()
+    
+run(text="Speed test - one layer - upsample new zero init", args=args, num_layers=1, downsample=False) # 4.6 it/s 172000 params
+
+    
+quit()
+    
+run(text="Speed test - one layer - upsample", args=args, num_layers=1, downsample=False) # 4.6 it/s
+run(text="Speed test - two layers - upsample", args=args, num_layers=2, downsample=False) # 4.3 it/s
+run(text="Speed test - four layers - upsample", args=args, num_layers=4, downsample=False) # 4.4 it/s - 3300 params
+
+    
+quit()
+    
+#run(img="base_images/carmen_cute.png", args=args, model_type="siren", lr=1e-4)
+#run(img="base_images/carmen_cute.png", args=args, model_type="siren", lr=5e-4)
+#run(img="base_images/carmen_cute.png", args=args, model_type="siren", lr=1e-3)
+run(text="Speed test - one layer", args=args, num_layers=1) # 3.9it/s
+run(text="Speed test - two layers", args=args, num_layers=2) # 2.01 it/s
+
+
+quit()
+
+run(img="base_images/carmen_cute.png", args=args, num_layers=3) # 1.4s/it
+
+run(img="base_images/carmen_cute.png", args=args, num_channels=32) # 1.75it/s
+run(img="base_images/carmen_cute.png", args=args, num_channels=32, num_layers=3)
+run(img="base_images/carmen_cute.png", args=args, num_channels=128)
+run(img="base_images/carmen_cute.png", args=args, num_channels=256)
+
+
+
+quit()
+
+run(img="base_images/carmen_cute.png", args=args, lr=0.0025)
+run(img="base_images/carmen_cute.png", args=args, lr=0.001)
+run(img="base_images/carmen_cute.png", args=args, lr=0.0005)
+run(img="base_images/carmen_cute.png", args=args, lr=0.0001)
+
+
+
+
+quit()
+
+run(img="base_images/carmen_cute.png", args=args, lr=0.01)
+run(img="base_images/carmen_cute.png", args=args, lr=0.005)
+
+
+quit()
+
+
+quit()
+
+run(img="base_images/carmen_cute.png", args=args)
+
+run(img="base_images/carmen_cute.png", args=args, model_type="siren", lr=1e-5)
+
+run(img="base_images/carmen_cute.png", args=args, model_type="vqgan")
+
+run(img="base_images/carmen_cute.png", args=args, model_type="stylegan")
+
+
+
+
+quit()
+
+
+run(text="A painting of a vampire.", args=args, num_layers=2)
+run(text="A painting of a ghost.", args=args, num_layers=2)
+run(text="A painting of a monster.", args=args, num_layers=2)
+run(text="A painting of a human.", args=args, num_layers=2)
+for prompt in classics:
+    run(text=prompt, args=args)
+
+
+
+
+run(text="A painting of a vampire.", args=args, num_layers=2)
+run(text="A painting of a vampire.", args=args, num_layers=3)
+
+quit()
+
+#run(text="A painting of a vampire.", args=args)
+#run(text="A painting of a vampire.", args=args, num_layers=2)
+#run(text="A painting of a vampire.", args=args, num_layers=3)
+
+run(text="A painting of a vampire.", args=args, num_channels=8)
+run(text="A painting of a vampire.", args=args, num_channels=16)
+run(text="A painting of a vampire.", args=args, num_channels=64)
+
+
+
+
+quit()
+
+args["act_func"] = "relu"
+run(text="A painting of a monster.", args=args, downsample=True)
+run(text="A painting of a monster.", args=args)
+
+args["act_func"] = "gelu"
+run(text="A painting of a monster.", args=args, downsample=True)
+run(text="A painting of a monster.", args=args)
+
+quit()
+
+run(text="A painting of a monster.", args=args, downsample=True)
+run(text="A painting of a monster.", args=args)
+
+
+
+quit()
+
+
+run(text="A painting of a vampire.", args=args, noise_augment=False)
+run(text="A painting of a vampire.", args=args, decay_cutout=1)
+
+quit()
+
+
+run(text="A painting of a vampire.", args=args, lr=.04)
+run(text="A painting of a vampire.", args=args, lr=.0005)
+run(text="A painting of a vampire.", args=args, lr=.00025)
+
+quit()
+
+run(text="A vampire. Unreal engine", args=args)
+run(text="A painting of a vampire. Unreal engine.", args=args)
+
+quit()
+run(text="A painting of a vampire.", args=args, batch_size=1)
+run(text="A painting of a vampire.", args=args, lr=.01)
+run(text="A painting of a vampire.", args=args, lr=.02)
+
+quit()
+
+
+run(text="A painting of a fairy.", args=args, batch_size=4)
+run(text="A painting of a fairy.", args=args, batch_size=8)
+run(text="A painting of a fairy.", args=args, batch_size=16)
+run(text="A painting of a fairy.", args=args, batch_size=32)
+run(text="A painting of a fairy.", args=args, lr=0.02)
+run(text="A painting of a fairy.", args=args, lr=0.0075)
+
+
+
+
+quit()
+
+    
+args["model_type"] = "siren"
+args["sideX"] = 256
+args["sideY"] = 256
+args["num_layers"] = 44
+args["hidden_size"] = 256
+args["lr_schedule"] = 0
+args["lr"] = 1e-5
+
+
+for prompt in fritz_satan_subj:
+    run(text=prompt, args=args)
+    
+for prompt in fritz_satan_subj_bw:
+    run(text=prompt, args=args)
+    
+for prompt in fritz_satan_subj_comic:
+    run(text=prompt, args=args)
+
+quit()
+
+
+
+args["sideX"] = 512
+args["sideY"] = 512
+args["iterations"] = 500
+args["save_every"] = 20
+
+args["model_type"] = "conv"
+#run(text="A colourful bird drinking out of a beautiful flower", args=args, num_layers=1)
+#run(text="A colourful bird drinking out of a beautiful flower", args=args, num_layers=4)
+#run(text="A colourful bird drinking out of a beautiful flower", args=args, num_layers=8)
+
+run(text="A colourful bird drinking out of a beautiful flower", args=args, num_channels=64)
+run(text="A colourful bird drinking out of a beautiful flower", args=args, num_channels=1024)
+run(text="A colourful bird drinking out of a beautiful flower", args=args, num_layers=4, num_channels=512)
+
+
+
+quit()
+
+args["sideX"] = 1920
+args["sideY"] = 1080
+args["iterations"] = 2000
+args["save_every"] = 20
+
+#args["model_type"] = "siren"
+#for prompt in classics:
+#    run(text=prompt, args=args)
+
+args["model_type"] = "image"
+run(text="A colourful bird drinking out of a beautiful flower", args=args)
+
+
+quit()
+
+for prompt in classics:
+    run(text=prompt, args=args)
+
+quit()
 
 for prompt in classics:
     run(text=prompt, args=args)
