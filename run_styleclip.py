@@ -364,6 +364,13 @@ deepdaze_prompts = ["mist over green hills", "shattered plates on the grass", "c
 nice_landscape= "A watercolor landscape with the sun over mountains covered in trees"
 
 
+args["clip_names"] = ["ViT-B/16", "RN50x16"]
+args["batch_size"] = 32
+multi(deepdaze_prompts, args=args)
+
+quit()
+ 
+
 args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
 args["model_type"] = "image"
 args["sideX"] = 512
