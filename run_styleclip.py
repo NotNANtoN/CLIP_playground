@@ -363,6 +363,51 @@ deepdaze_prompts = ["mist over green hills", "shattered plates on the grass", "c
 
 nice_landscape= "A watercolor landscape with the sun over mountains covered in trees"
 
+cool_prompts = ["Looking back", "Supernova", "Boundless ego", "Oceanic boundlessness", "Consciousness", "Black hole", "Shifting", "The end of times", "a painting of a witch brewing a Halloween potion by Greg Rutkowski", "A green frog wearing a tiny hat", "Control the soul", "a landscape resembling The Lovers tarot card by Greg Rutkowski", "a beautiful epic wondrous fantasy painting of wind", "a beautiful epic wondrous fantasy painting of fire"]
+
+args["start_image_path"] = "white"
+args["iterations"] = 500
+args["use_spherical_loss"] = 1
+args["clip_names"] = ["ViT-B/16", "ViT-B/16", "RN50"]
+args["batch_size"] = 4
+multi(cool_prompts, args=args)
+
+args["use_spherical_loss"] = 1
+multi(cool_prompts, args=args)
+
+
+
+quit()
+
+
+args["style"] = "../stylegan3/sg3_madziowa_p_240.pkl"
+args["model_type"] = "stylegan"
+args["save_every"] = 1
+args["iterations"] = 200
+
+
+prompt = "A scary cat"
+args["use_spherical_loss"] = 1
+args["lr"] = 0.05
+#run(text=prompt, args=args, opt_raw=1, lr=0.03 / 30)
+#run(text=prompt, args=args, opt_all_layers=0)
+run(text="A sunflower", args=args, opt_all_layers=1)
+run(text="A funslower", args=args, opt_all_layers=1)
+run(text=prompt, args=args, opt_all_layers=1)
+
+
+args["use_spherical_loss"] = 0
+#run(text="Inbetween two losses...", args=args, iterations=10)
+#run(text=prompt, args=args, opt_raw=1, lr=0.03 / 30)
+#run(text=prompt, args=args, opt_all_layers=0)
+run(text=prompt, args=args, opt_all_layers=1)
+run(text="A sunflower", args=args, opt_all_layers=1)
+run(text="A funslower", args=args, opt_all_layers=1)
+
+
+quit()
+
+quit()
 
 args["clip_names"] = ["ViT-B/16", "RN50x16"]
 args["batch_size"] = 32
