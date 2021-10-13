@@ -44,7 +44,7 @@ def run(text=None, img=None, encoding=None, name=None, audio=None, args=None, **
     os.makedirs(name, exist_ok=True)
     # copy start image to folder
     args = dict(args)
-    if "start_image_path" in args:
+    if "start_image_path" in args and (args["start_image_path"].endswith(".jpg") or args["start_image_path"].endswith(".png")):
         shutil.copy(args["start_image_path"], name)
     # copy image for feature extraction to folder
     #if img is not None and isinstance(img, str):
@@ -310,7 +310,7 @@ ak_custom_prompts = ["Vector quantized generative adversarial network", "An alli
 
 strong_adjectives = ["Oneness", "Unity", "Non-duality", "Pureness", "purity", "independence", "freedom", "life", "the meaning of life", "Mind-bending", "Shocking", "Awe-inspiring", "Unbelievable", "Mind-boggling", "Exhilarating", "Electrifying", "Mesmerizing", "Earth-shattering", "Weird", "Catastrophical", "Apocalyptical", "Soul-shattering", "Tempostuous", "passionate", "torrid", "soulful", "ardent", "impassioned", "hysterical"]
 
-cool_prompts = ["do unto others as you would have them do unto you", "Looking back", "Meditative peace in a sunlit forest.", "Gödel, Escher, Bach", "Supernova", "Ecstacy","Boundless ego", "Oceanic boundlessness", "Home", "Wanderlust"]
+cool_prompts = ["Looking back", "Supernova", "Boundless ego", "Oceanic boundlessness", "Consciousness", "Black hole", "Shifting", "The end of times", "a painting of a witch brewing a Halloween potion by Greg Rutkowski", "A green frog wearing a tiny hat", "Control the soul", "a landscape resembling The Lovers tarot card by Greg Rutkowski", "a beautiful epic wondrous fantasy painting of wind", "a beautiful epic wondrous fantasy painting of fire"]
 
 football_imgs = ["When it rains, it pours", "A perfect storm", "Don't beat a dead horse", "You can't judge a book by its cover", "Spill the beans"]
 nlu_impossible = ["tree", "Tree is a perennial plant, a biological type, with an elongated stem, or trunk, with supporting branches and leaves.", "The trophy did not fit in the suitcase because it was too big", "The trophy did not fit in the suitcase because it was too small", "Hey Joe, the loud omelet wants another beer", "The white house rebuked the threatening statements north korea made.", "I like to play bridge", "Mary enjoyed the movie", "Mary enjoyed the sandwich", "BBC has a reporter in every country", "John had pizza with his kids", "John had a pizza with pineapple", "The corner table wants another beer", "Don't worry about Simon, he's a rock", "John works in the neighbourhood store", "John works in the computer store"]
@@ -336,7 +336,8 @@ beach_marriage_land = ["An orca marriage at the beach", "Two orcas marrying at t
 couch_cuddle_land = ["A beautiful couch where a couple can cuddle and relax", "The most comfortable cuddle area"]
 
 root_folder = "base_images/florka_bilder/"
-florka_imgs = [root_folder + img for img in os.listdir(root_folder) if img.endswith(".jpeg") or img.endswith(".png")]
+if os.path.exists(root_folder):
+    florka_imgs = [root_folder + img for img in os.listdir(root_folder) if img.endswith(".jpeg") or img.endswith(".png")]
 #print(florka_imgs)
 
 dnd_2 = ["Dungeons and Dragons", "A dragon", "A portal to a different dimension", "A drow", "A tiefling", "A dragonborn"]
@@ -363,6 +364,158 @@ deepdaze_prompts = ["mist over green hills", "shattered plates on the grass", "c
 
 nice_landscape= "A watercolor landscape with the sun over mountains covered in trees"
 
+human_right_declaration_first_ten = ["All human beings are born free and equal in dignity and rights. They are endowed with reason and conscience and should act towards one another in a spirit of brotherhood.", 
+                           "Everyone is entitled to all the rights and freedoms set forth in this Declaration, without distinction of any kind, such as race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status. Furthermore, no distinction shall be made on the basis of the political, jurisdictional or international status of the country or territory to which a person belongs, whether it be independent, trust, non-self-governing or under any other limitation of sovereignty.",
+                           "Everyone has the right to life, liberty and security of person.", 
+                           "No one shall be held in slavery or servitude; slavery and the slave trade shall be prohibited in all their forms.", 
+                          "No one shall be subjected to torture or to cruel, inhuman or degrading treatment or punishment.",
+                          "Everyone has the right to recognition everywhere as a person before the law.",
+                          "All are equal before the law and are entitled without any discrimination to equal protection of the law. All are entitled to equal protection against any discrimination in violation of this Declaration and against any incitement to such discrimination.",
+                          "Everyone has the right to an effective remedy by the competent national tribunals for acts violating the fundamental rights granted him by the constitution or by law.",
+                          "No one shall be subjected to arbitrary arrest, detention or exile.",
+                           "Everyone is entitled in full equality to a fair and public hearing by an independent and impartial tribunal, in the determination of his rights and obligations and of any criminal charge against him.",
+                           
+                          ]
+
+deep_racers = ["Deep Racers", "DeepRacers", "Deep Racing Team", "Deep Learning", "Cool deep racers"]
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["iterations"] = 1000
+args["codebook_size"] = 1024
+
+args["batch_size"] = 8
+
+run(text="intermezzo", args=args)
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50"]
+args["batch_size"] = 16
+args["gradient_accumulate_every"] = 4
+multi(cool_prompts, args=args, start_image_path="white") 
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50"]
+args["batch_size"] = 16
+multi(cool_prompts, args=args)
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 32
+multi(cool_prompts, args=args)
+
+
+quit()
+
+#run(text="speed test", clip_names=["ViT-B/16", "ViT-B/32", "RN50x16"], args=args) # 2.66it/s - 12 GB
+#run(text="speed test", clip_names=["ViT-B/16"], args=args) # 4.5it/s
+#run(text="speed test", clip_names=["ViT-B/32"], args=args) # 4.9it/s
+#run(text="speed test", clip_names=["ViT-B/16", "ViT-B/32"], args=args) # 4.0it/s
+#run(text="speed test", clip_names=["ViT-B/16", "RN50"], args=args) # 4.14it/s
+#run(text="speed test", clip_names=["ViT-B/16", "RN50x16"], args=args) # 2.8it/s
+#run(text="speed test", clip_names=["ViT-B/16", "ViT-B/32", "RN50"], args=args) # 3.77it/s
+
+
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50x16"]
+args["batch_size"] = 6
+#multi(cool_prompts, args=args, start_image_path="white") 
+# 2.7it/s
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50"]
+args["batch_size"] = 16
+#multi(cool_prompts, args=args, start_image_path="white") 
+# 2.7it/s - 10.2GB
+
+args["clip_names"] = ["ViT-B/16", "RN50"]
+args["batch_size"] = 32
+#multi(cool_prompts, args=args, start_image_path="white") 
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 8
+#multi(cool_prompts, args=args, start_image_path="white") 
+# 3.6it/s - 8.2GB
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 32
+#multi(cool_prompts, args=args, start_image_path="white") 
+# 2.2it/s - 10.9GB
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 32
+args["gradient_accumulate_every"] = 4
+#multi(cool_prompts, args=args, start_image_path="white") 
+# 1.8s/it 
+
+quit()
+
+
+args["clip_names"] = ["ViT-B/16", "RN50"]
+args["batch_size"] = 32
+multi(cool_prompts, args=args, start_image_path="white")
+
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["batch_size"] = 32
+multi(cool_prompts, args=args)
+
+# Vit and RN50x with res 480 and bs 8 need a bit under 12GB
+args["clip_names"] = ["ViT-B/16", "RN50x16"]
+args["batch_size"] = 8
+args["gradient_accumulate_every"] = 4
+multi(cool_prompts, args=args, start_image_path="white")
+
+quit()
+
+#multi(add_context(human_right_declaration_first_ten, prefix="A painting. ")
+#, model_type="image", sideX=1024, sideY=1024, lr=0.05, batch_size=32, stack_size=8)
+
+#multi(add_context(human_right_declaration_first_ten, prefix="A charcoal drawing. ")
+#, model_type="image", sideX=1024, sideY=1024, lr=0.05, batch_size=32, stack_size=8)
+
+#multi(human_right_declaration_first_ten, model_type="conv", sideX=1024, sideY=1024, lr=0.05, batch_size=32, stack_size=8, stride=1, downsample=True, num_channels=32, act_func="gelu", norm_type="layer", num_layers=5)
+
+#multi(human_right_declaration_first_ten, model_type="siren", sideX=256, sideY=256, lr=1e-5, num_layers=32, hidden_size=256, batch_size=16)
+
+
+#multi(human_right_declaration_first_ten[:3], model_type="image", sideX=1024, sideY=1024, lr=0.05, batch_size=64, stack_size=8, args=args)
+
+#multi(human_right_declaration_first_ten[:3], model_type="conv", sideX=1024, sideY=1024, lr=0.05, batch_size=16, stack_size=8, stride=1, downsample=True, num_channels=32, act_func="gelu", norm_type="layer", num_layers=5, args=args)
+#multi(human_right_declaration_first_ten, model_type="siren", sideX=256, sideY=256, lr=1e-5, num_layers=32, hidden_size=256, #batch_size=16, args=args)
+
+#multi(deep_racers,args=args, model_type="vqgan", sideX=480, sideY=480, lr=0.1, batch_size=32)
+
+#quit()
+args["iterations"] = 2000
+
+args["sideX"] = 640
+args["sideY"] = 480
+args["model_type"] = "vqgan"
+args["lr"] = 0.1
+args["batch_size"] = 12
+
+run(text="A beautiful skyline of san diego next to a highway", img="base_images/michi_san_diego.jpg", args=args)
+run(text="A beautiful skyline of los angeles next to a highway", img="base_images/michi_san_diego.jpg", args=args)
+
+run(text="A beautiful skyline of san diego next to a highway", start_image_path="base_images/michi_san_diego.jpg", args=args)
+run(text="A beautiful skyline of los angeles next to a highway", start_image_path="base_images/michi_san_diego.jpg", args=args)
+
+
+run(img="base_images/michi_san_diego.jpg", args=args, start_image_path= "white")
+
+#run(img="base_images/michi_san_diego.jpg", args=args)
+
+#run(text="A green foggy city", img="base_images/michi_san_diego.jpg", args=args)
+#run(text="A beautiful and foggy city", img="base_images/michi_san_diego.jpg", args=args)
+
+
+#multi(add_context(human_right_declaration_first_ten, prefix="A marvellous painting about: "), model_type="vqgan", sideX=480, sideY=480, lr=0.1, batch_size=32, args=args)
+#multi(add_context(human_right_declaration_first_ten, prefix="A marvellous painting about: "), model_type="vqgan", sideX=720, sideY=480, lr=0.1, batch_size=8, args=args)
+
+
+#multi(add_context(human_right_declaration_first_ten, prefix="A fantastic painting about: "), model_type="vqgan", sideX=480, sideY=480, lr=0.1, batch_size=16, args=args)
+args["neg_text"] = "text. watermarks. signature. scribbles"
+#multi(add_context(human_right_declaration_first_ten, prefix="A fantastic painting about: "), model_type="vqgan", sideX=480, sideY=480, lr=0.1, batch_size=16, args=args)
+
+
+
+quit()
 
 args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
 args["model_type"] = "image"
