@@ -12,11 +12,11 @@ import torch
 import torchvision.transforms as T
 import matplotlib.pyplot as plt
 
-sys.path.append("../StyleCLIP_modular")
+sys.path.append("../CLIPGuidance")
 from style_clip import Imagine, create_text_path
 
 
-def run(text=None, img=None, encoding=None, name=None, audio=None, args=None, **kwargs):
+def run(text=None, img=None, encoding=None, name=None, audio=None, args=None, store_path=None, **kwargs):
     if args is None:
         args = {}
     args = copy.copy(args)
@@ -44,7 +44,7 @@ def run(text=None, img=None, encoding=None, name=None, audio=None, args=None, **
     os.makedirs(name, exist_ok=True)
     # copy start image to folder
     args = dict(args)
-    if "start_image_path" in args and (args["start_image_path"].endswith(".jpg") or args["start_image_path"].endswith(".png")):
+    if "start_image_path" in args and args["start_image_path"] is not None and (args["start_image_path"].endswith(".jpg") or args["start_image_path"].endswith(".png")):
         shutil.copy(args["start_image_path"], name)
     # copy image for feature extraction to folder
     #if img is not None and isinstance(img, str):
@@ -102,7 +102,17 @@ def run(text=None, img=None, encoding=None, name=None, audio=None, args=None, **
         plt.legend()
         plt.savefig("loss_plot.png")
         plt.close()
-       
+        
+        if store_path is not None:
+            os.chdir(original_dir)
+            if store_path[-4:] not in (".jpg", "jpeg", ".png"):
+                os.makedirs(store_path, exist_ok=True)
+                store_path += time_str + "_" + input_name + ".jpg"
+            else:
+                os.makedirs("/".join(store_path.split("/")[:-1]), exist_ok=True)
+            tensor_img = imagine.model.model()
+            pil_img = T.ToPILImage()(tensor_img.squeeze())
+            pil_img.save(store_path, subampling=False, quality=95) 
         # save
         del imagine.perceptor
         del imagine.model.perceptor
@@ -260,7 +270,7 @@ def add_context(words, prefix="", suffix=""):
     return [prefix + word + suffix for word in words]
 
 args["early_stopping_steps"] = 0
-args["use_tv_loss"] = 1
+args["tv_loss_scale"] = 1
 args["neg_text"] = neg_text
 args["iterations"] = 500
 
@@ -364,13 +374,683 @@ deepdaze_prompts = ["mist over green hills", "shattered plates on the grass", "c
 
 nice_landscape= "A watercolor landscape with the sun over mountains covered in trees"
 
-cool_prompts = ["Looking back", "Supernova", "Boundless ego", "Oceanic boundlessness", "Consciousness", "Black hole", "Shifting", "The end of times", "a painting of a witch brewing a Halloween potion by Greg Rutkowski", "A green frog wearing a tiny hat", "Control the soul", "a landscape resembling The Lovers tarot card by Greg Rutkowski", "a beautiful epic wondrous fantasy painting of wind", "a beautiful epic wondrous fantasy painting of fire"]
+cool_prompts = ["Looking back", "Supernova", "Boundless ego", "Oceanic boundlessness", "Consciousness", "Black hole", "Shifting", "The end of times", "a painting of a witch brewing a Halloween potion by Greg Rutkowski", "A green frog wearing a tiny hat", "Control the soul", "a landscape resembling The Lovers tarot card by Greg Rutkowski", "a beautiful epic wondrous fantasy painting of fire"]
 
 args["start_image_path"] = "white"
-args["iterations"] = 500
+args["iterations"] = 1000
 args["use_spherical_loss"] = 1
-args["clip_names"] = ["ViT-B/16", "ViT-B/16", "RN50"]
+args["clip_names"] = ["ViT-B/32", "ViT-B/16", "RN50"]
+args["batch_size"] = 8 #4 #16  # 4      # 12
+args["sideX"] = 496    #760 # 948    # 648
+args["sideY"] = 696    #380 # 474    # 518
+args["gradient_accumulate_every"] = 1
+
+args["lpips_weight"] = 0.0
+args["lpips_batch_size"] = 4
+args["lpips_use_clip"] = 0
+args["lpips_image"] = None 
+
+args["neg_text"] = 'text, signature, watermarks' #None
+
+
+tree_dir = "base_images/tree_of_life/"
+tree_imgs = [tree_dir + i for i in os.listdir(tree_dir) if i.endswith(".jpeg") or i.endswith(".png")]
+
+img = tree_imgs[0]
+#args["tv_loss_scale"] = 1.0
+#run(text="The tree of life by David Salle", lpips_image=img, args=args)
+
+
+args["tv_loss_scale"] = 3.0 # 1000 leads to constant image  - 100 is too smooth - 10 was large
+#run(text="The tree of life by David Salle", lpips_image=img, args=args)
+
+
+args["tv_loss_scale"] = 1.0
+args["use_mixed_precision"] = False
 args["batch_size"] = 4
+args["lpips_batch_size"] = 4
+args["start_image_path"] = None
+
+
+args["lpips_net"] = "vgg"
+args["lpips_weight"] = 1000
+
+
+#args["lpips_batch_size"] = 16
+args["iterations"] = 1000
+args["use_russell_transform"] = 1
+
+args["model_type"] = "vqgan"
+args["lr"] = 0.03
+args["iterations"] = 1000
+args["sideX"] = 496 - 7 * 16    #760 # 948    # 648
+args["sideY"] = 696 - 9 * 16
+
+bauer_dir = "base_images/bauer_imgs/"
+bauer_imgs = [bauer_dir + i for i in os.listdir(bauer_dir) if i.endswith(".jpg") or i.endswith(".png")]
+
+
+
+for lpips_weight in [10, 50]:
+    for lpips_img in bauer_imgs:
+        clean_lpips_name = lpips_img.split("/")[-1].split(".")[0]
+        for img in bauer_imgs:
+            clean_img_name = img.split("/")[-1].split(".")[0] + ".jpg"
+            store_path = f"exps/bauer_img_fuse_vqgan_1/{lpips_weight}/{clean_lpips_name}/{clean_img_name}"
+            run(img=img, lpips_image=lpips_img, lpips_weight=lpips_weight, args=args, store_path=store_path)
+
+            
+args["pips_weight"] = 0
+for img in bauer_imgs:
+    clean_img_name = img.split("/")[-1].split(".")[0] + ".jpg"
+    store_path = f"exps/bauer_img_in_vqgan/"
+    run(img=img, args=args, store_path=store_path)
+
+
+
+args["model_type"] = "dip"
+args["batch_size"] = 16
+args["lr"] = 0.0003
+args["sideX"] = 1280 #1120    #760 # 948    # 648
+args["sideY"] = 720
+
+for img in bauer_imgs:
+    clean_img_name = img.split("/")[-1].split(".")[0] + ".jpg"
+    store_path = f"exps/bauer_img_in_dip_wide/"
+    run(img=img, args=args, store_path=store_path)
+    
+    
+args["model_type"] = "dip"
+args["lr"] = 0.0003
+args["sideX"] = 1024 #1120    #760 # 948    # 648
+args["sideY"] = 1024
+for img in bauer_imgs:
+    clean_img_name = img.split("/")[-1].split(".")[0] + ".jpg"
+    store_path = f"exps/bauer_img_in_dip_square/"
+    run(img=img, args=args, store_path=store_path)
+
+
+quit()
+
+
+args["lpips_weight"] = 0
+args["use_mixed_precision"] = True
+args["model_type"] = "dip"
+args["lr"] = 0.0003
+args["sideX"] = 1280 #1120    #760 # 948    # 648
+args["sideY"] = 720
+
+
+args["batch_size"] = 16
+
+args["sideX"] = 720 #1120    #760 # 948    # 648
+args["sideY"] = 1280
+store_path = "exps/seren/"
+base = "Serendipity."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+quit()
+
+store_path = "exps/corona_discharge/"
+base = "Corona discharge."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful photo of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic photo of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic photo of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+args["sideX"] = 720 #1120    #760 # 948    # 648
+args["sideY"] = 1280
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful photo of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic photo of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic photo of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+
+quit()
+
+
+store_path = "exps/mental/"
+base = "Schizophrenia."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+
+store_path = "exps/seren/"
+base = "Serendipity."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+store_path = "exps/mental/"
+base = "The heat death of the universe."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+store_path = "exps/consc_bs16/"
+base = "Consciousness."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+store_path = "exps/consc_bs4/"
+args["batch_size"] = 4
+base = "Consciousness."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+store_path = "exps/consc_bs64/"
+args["batch_size"] = 64
+base = "Consciousness."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+quit()
+
+args["lr_schedule"] = 0
+args["iterations"] = 50
+store_path = "exps/candy2/"
+#base = "Sweet dance candy is falling from the sky. You feel it slowly melting in your hands."
+base = "Sweet dance candy appears in a vast field of brilliant light. The air is filled with the sweet smell of your favorite candy."
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+args["lr"] = 0.003
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+args["iterations"] = 50
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+
+
+args["iterations"] = 500
+args["use_russell_transform"] = 0
+args["lr"] = 0.0003
+run(text=base, args=args, store_path=store_path)
+run(text=base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path)
+
+
+
+quit()
+
+
+quit()
+
+store_path = "exps/candy/"
+base = "Sweet dance candy is falling from the sky. You feel it slowly melting in your hands."
+run(text=base, args=args, iterations=500)
+run(text=base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path, iterations=500)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, iterations=500, store_path=store_path)
+
+
+args["model_type"] = "image"
+args["lr"] = 0.03
+args["stack_size"] = 4
+args["sideX"] = 512
+args["sideY"] = 768
+run(text=base, args=args, iterations=500)
+run(text=base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path, iterations=500)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, iterations=500, store_path=store_path)
+args["stack_size"] = 1
+
+
+args["model_type"] = "vqgan"
+args["lr"] = 0.03
+args["iterations"] = 500
+args["sideX"] = 496 - 3 * 16    #760 # 948    # 648
+args["sideY"] = 696 - 4 * 16
+
+run(text=base, args=args, iterations=500)
+run(text=base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A beautiful painting of " + base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation.", args=args, iterations=500, store_path=store_path)
+run(text="A psychedelic painting of " + base +  " Trending on artstation. Unreal engine.", args=args, store_path=store_path, iterations=500)
+run(text=base +  " Trending on artstation. Unreal engine.", args=args, iterations=500, store_path=store_path)
+
+quit()
+
+#run(text="Consciousness", args=args, iterations=500)
+run(text="A beautiful painting of Consciousness. Trending on artstation.", args=args, iterations=500)
+run(text="A beautiful painting of Consciousness. Unreal engine.", args=args, iterations=500)
+run(text="A beautiful painting of Consciousness. Unreal engine. Trending on artstation.", args=args, iterations=500)
+
+
+args["model_type"] = "vqgan"
+args["lr"] = 0.03
+args["iterations"] = 1000
+args["sideX"] = 496 - 3 * 16    #760 # 948    # 648
+args["sideY"] = 696 - 4 * 16
+
+
+for lpips_weight in [10, 50]:
+    for lpips_img in tree_imgs[:3]:
+        clean_lpips_name = lpips_img.split("/")[-1].split(".")[0]
+        for img in tree_imgs[:5]:
+            clean_img_name = img.split("/")[-1].split(".")[0] + ".jpg"
+            store_path = f"exps/sey_vqgan_fuse_1/{lpips_weight}/{clean_lpips_name}/{clean_img_name}"
+            run(img=img, lpips_image=lpips_img, lpips_weight=lpips_weight, args=args, store_path=store_path)
+
+quit()
+for lpips_weight in [10, 50, 100]:
+    for i, img in enumerate(tree_imgs[:5]):
+        run(img=tree_imgs[:5][-i], lpips_image=img, lpips_weight=lpips_weight, args=args)
+
+
+args["model_type"] = "vqgan"
+args["lr"] = 0.03
+args["iterations"] = 2000
+args["sideX"] = 496 - 3 * 16    #760 # 948    # 648
+args["sideY"] = 696 - 4 * 16
+
+for lpips_weight in [10, 50, 100]:
+    for img in tree_imgs[:5]:
+        run(text="A beautiful painting of a tree in the style of David Salle", lpips_image=img, lpips_weight=lpips_weight, args=args)
+
+        
+run(text="Mimicing an image while fusing the meaning of another", args=args, iterations=100)    
+for lpips_weight in [10, 50, 100]:
+    for i, img in enumerate(tree_imgs[:5]):
+        run(img=tree_imgs[:5][-i], lpips_image=img, lpips_weight=lpips_weight, args=args)
+
+
+
+quit()
+
+args["model_type"] = "vqgan"
+args["lr"] = 0.03
+
+args["sideX"] = 496 - 3 * 16    #760 # 948    # 648
+args["sideY"] = 696 - 4 * 16
+args["iterations"] = 500
+
+run(text="Moar iterations!!!", args=args, clip_names=["ViT-B/32"], iterations=100)
+run(text="Single vision transformers", args=args, clip_names=["ViT-B/32"], iterations=100)
+
+run(text="Consciousness", args=args, clip_names=["ViT-B/32"])
+run(text="Consciousness", args=args, clip_names=["ViT-B/16"])
+run(text="Consciousness", args=args, clip_names=["ViT-L/14"])
+
+run(text="vision transformer combinations", args=args, clip_names=["ViT-B/32"], iterations=100)
+run(text="Consciousness", args=args, clip_names=["ViT-B/16", "ViT-B/32", "RN50"])
+run(text="Consciousness", args=args, clip_names=["ViT-L/14", "ViT-B/32", "RN50"])
+run(text="Consciousness", args=args, clip_names=["ViT-L/14", "ViT-B/16"])
+
+args["lr"] = 0.1
+run(text="vision transformer combinations with stronger learning", args=args, clip_names=["ViT-B/32"], iterations=100)
+run(text="Consciousness", args=args, clip_names=["ViT-L/14"])
+run(text="Consciousness", args=args, clip_names=["ViT-L/14", "ViT-B/32", "RN50"])
+run(text="Consciousness", args=args, clip_names=["ViT-L/14", "ViT-B/16"])
+
+args["lr"] = 0.03
+
+run(text="vision transformer combinations with weaker learning", args=args, clip_names=["ViT-B/32"], iterations=100)
+run(text="Consciousness", args=args, clip_names=["ViT-L/14"])
+run(text="Consciousness", args=args, clip_names=["ViT-L/14", "ViT-B/32", "RN50"])
+run(text="Consciousness", args=args, clip_names=["ViT-L/14", "ViT-B/16"])
+
+#run(text="Consciousness", args=args, clip_names=["RN50"], lr=0.03)
+#run(text="Consciousness", args=args, clip_names=["RN50", "RN101"], lr=0.03)
+
+
+
+args["lr"] = 0.003
+#run(text="Reducing learning rate...", args=args)
+#run(text="Consciousness", iterations=100, args=args, clip_names=["ViT-L/14"])
+#run(text="Consciousness", iterations=100, args=args, clip_names=["ViT-L/14", "ViT-B/16"])
+
+quit()
+
+        
+quit()
+
+args["lr"] = 0.01
+for lpips_weight in [10, 50, 100]:
+    for img in tree_imgs[:5]:
+        run(text="The tree of life by David Salle", lpips_image=img, lpips_weight=lpips_weight, args=args)
+        
+quit()
+ 
+args["tv_loss_scale"] = 5.0
+run(text="The tree of life by David Salle", lpips_image=img, args=args)
+
+quit()
+# 4.0 does not work but 3.99 works...
+for lpips_weight in [4.0, 3.99]:#, 1.0, 3.0, 10.0]:
+    for img in tree_imgs[:1]:
+        run(text="The tree of life by David Salle", lpips_image=img, lpips_weight=lpips_weight, args=args)
+        
+#    for img in tree_imgs[:3]:
+#        run(text="The stunning painting 'The tree of life' by David Salle", #lpips_image=img, lpips_weight=lpips_weight, args=args) 
+
+
+quit()
+
+run(text="A simple tree with some big colorful leaves and a worm on it on a white background", args=args)
+run(text="A simple tree with some big colorful leaves and a worm on it on a white background in the style of David Salle", args=args)
+run(text="A simple tree with some big colorful leaves and a worm on it in the style of David Salle with figures by Peter Arno in the background", args=args)
+run(text="The tree of live with some big colorful leaves and a worm on it in the style of David Salle with figures by Peter Arno in the background", args=args)
+run(text="The tree of life by David Salle is in the foreground and comic figures by Peter Arno are in the background", args=args)
+
+
+for img in tree_imgs:
+    run(text=None, img=img, args=args)
+for img in tree_imgs:
+    run(text="The tree of life by David Salle", img=img, args=args)
+
+    
+
+
+quit()
+
+square_cfg = (576, 576, 8 , 2000)
+t_shirt_cfg = (496, 696, 8, 2000)
+test_cfg = (496, 696, 8, 500)
+
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = t_shirt_cfg
+run(img="base_images/oma_pflanzen.jpg", args=args)
+run(img="base_images/oma_pflanzen.jpg", text="The quiet within", args=args)
+run(img="base_images/oma_pflanzen.jpg", text="Vipassana meditation", args=args)
+run(img="base_images/oma_pflanzen.jpg", text="Vipassana meditation", args=args)
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = square_cfg
+args["circular"] = 1
+run(img="base_images/oma_pflanzen.jpg", args=args)
+run(img="base_images/oma_pflanzen.jpg", text="The quiet within", args=args)
+run(img="base_images/oma_pflanzen.jpg", text="Vipassana meditation", args=args)
+run(img="base_images/oma_pflanzen.jpg", text="Vipassana meditation", args=args)
+
+
+prompts = ["An amazing, wondrous, beautiful painting of Consciousness", "A spiritual painting of Consciousness", "A transhumanist perspective of consciousness", "An amazing, wondrous, beautiful painting of the transhumanist perspective of consciousness", "An amazing baroque painting of the first interaction of a human with artificial general intellignce", "Consciousness in the style of van gogh", "Consciousness in the style of monet", "Interacting with artificial general intelligence", "Cognitive science in the style of Monet", "A dog having a spiritual experience", "The origin of life", "DNA", "A picture of consciousness. HDR. Canon pro picture."]
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = t_shirt_cfg
+args["circular"] = 0
+multi(prompts, args=args)
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = square_cfg
+args["circular"] = 1
+multi(prompts, args=args)
+
+quit()
+
+prompts = ["Deep connection and empathy, bonded over language", "Deep connection and empathy, bonded over language. A deep ambient painting", "Deep connection and empathy, bonded over language. An epic wondrous beautiful painting", "Vipassana. A deep ambient painting", "Vipassana. A wondrous beautiful spiritual painting", "The beauty of vipassana meditation", "Consciousness", "Consciousness. A deep ambient painting", "Consciousness. An epic, wondrous, beautiful painting", "Consciousness. By James Gurney", "Consciousness. By Greg Rutkowski", "Consciousness. By Dali", "A deep ambient painting of consciousness in the style of dali", "Consciousness. By Dali. Deep ambient painting."]
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = t_shirt_cfg
+multi(prompts, args=args)
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = square_cfg
+args["circular"] = 1
+multi(prompts, args=args)
+
+quit()
+
+test_prompts = ["Cognitive science. An epic, wondrous painting", "Tango. An epic, wondrous painting", "Nadibu", "Dancing tango at the border of a stunning lake. A deep ambient painting.", "The quiet within. A deep ambient painting", "Deformations in affine hypersurface theory. Unreal engine rendering"]
+best_prompts = ["The art of cognitive science", "Deep connection and_empathy, bonded over language", "The art of tango. A deep ambient painting", "The quiet within", "Finding the shape embedded within the stone. A deep ambient painting", "Deep art, emerging from a rock sculpture. A deep ambient painting", "A deep painting that represents Geometry And Topology Of Submanifolds", "Deformations in affine hypersurface theory"]
+
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = t_shirt_cfg
+multi(test_prompts, args=args)
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = square_cfg
+args["circular"] = 1
+multi(test_prompts, args=args)
+
+quit()
+
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = t_shirt_cfg
+multi(best_prompts, args=args)
+
+args["sideX"], args["sideY"], args["batch_size"], args["iterations"] = square_cfg
+args["circular"] = 1
+multi(best_prompts, args=args)
+
+
+
+quit()
+
+prompts = ["A wind turbine destroys the local ecosystem", "A destructive wind turbine", "Deep emotional connection by open laughter, empathy, and understanding", "The quiet whithin. By James Gurney", "A sacrifice to the Gods", "The meaning of the name 'Nadibu'", "The meaning of the name 'Heidrun'", "The meaning of life", "2 + 2", "The results of a vegan diet", "An amazing t-shirt print", "God's work", "Valhalla", "Herkules", "Hydra", "Vampire", "Monster", "A picture of the first general artificial intelligence"]
+           
+prompts = ["An image representing, empathy, harmony, friendship, happiness", "Cognitive science. A deep ambient painting", "Finding the shape embedded within the stone. A deep ambient painting"]
+
+multi(prompts, args=args)
+
+top_prompts = ["The art of cognitive science", "Cognitive science", "Deep connection and empathy, bonded over language", "Deformations in affine hypersurface theory", "Deformations in affine hypersurface theory. A deep ambient painting", "The quiet within", "The art of Tango. A deep ambient painting", "Finding the shape embedded within the stone"]
+args["circular"] = 1
+multi(top_prompts, args=args)
+
+quit()
+
+emilia_prompts = ["Cognitive science", "The art of cognitive science", "Cognitive science: a dance of the mind", "Emilia: the cognitive scientist of the year", "Emilia, a genius female cognitive scientist"]
+papa_prompts = ["Deep mathematics", "Pure mathematics", "Geometry And Topology Of Submanifolds", "Deformations in Affine Hypersurface Theory"]
+mama_prompts = ["An artistic interpretation of 'Tango'", "The love of tango", "The beauty of tango", "Tango", "Dancing tango at the border of a stunning lake"]
+heidrun_prompts = [""]
+oma_prompts = ["Vipassana", "The quiet within", "Pure meditiation and love", "Finding love through meditation", "A woman with medium long gray hair is meditating in peace"]
+opa_prompts = ["Amazing rocks", "The art of rock sculptures", "The most beautiful rock sculpture", "A stonemason creating his most beautiful sculpture", "A male stonemason with a white beard creating his most beautiful sculpture"]
+
+mama_prompts_2 = ["An artistic interpretation of 'Tango'", "Tango. By Greg Rutkowski"]
+
+all_prompts = [add_context(papa_prompts, suffix=". By Greg Rutkowski."), 
+               add_context(mama_prompts, suffix=". By Greg Rutkowski."),
+               ["An artistic interpretation of 'Vipassana'", "Vipassana. By Greg Rutkowski"],
+               ["Stonemasonry", "A stonemason's perfect art. By Greg Rutkowski.", "Finding the shape embedded in the stone", "Finding the shape embedded within the stone"],
+               ["Great english literature. By James Gurney.", "The gardens of peace and joy. By James Gurney", "The stories speak to the mind and teach about love and life's imperfections"]
+               ]
+
+
+all_prompts = [["The tree of life, dancing in a swirl", "Life is a dance. Life is tango. A deep ambient painting", "The art of Tango", "The art of tango. A deep ambient painting."],
+              ["A gem full of beauty, hidden in stone sculpture which stands in a quite garden", "Deep art, emerging from a rock sculpture", "A rock sculpture emits beams of shimmering light and beauty"],
+              ["The art of teaching languages", "multi-cultural, deep understanding", "Deep connection and empathy, bonded over language", "A book emits shimmering lights and wisdom", "A book tangles the mind"],
+               
+              ]
+
+prompts = ["A propaganda poster for transhumanism", "A propaganda poster for meditation", "A propaganda poster for love", "A propaganda poster for the god of death", "A propaganda poster for maelstorm", "A propaganda poster for the heat death of the universe", "the heat death of the universe", "Artificial intelligence boosts humanity into a new era of peace and progress", "A phoenix erupts from the core of the melting earth", "A mighty tree ent stops deforesters from building a new wind turbine in beautiful nature", "The construction of a wind turbine destroys a local ecosystem for profit", "The construction of a wind turbine destroys a local ecosystem", "The construction of a wind turbine destroys a local ecosystem. Deep, beautiful art by James Gurney", "The construction of a wind turbine destroys a local ecosystem. By James Gurney"]
+
+multi(prompts, args=args)
+
+quit()
+
+brain_prompts = ["A brain journal cover for the article: A recurrent machine learning model predicts intracranial hypertension in neurointensive care patients", "A brain journal cover: A recurrent machine learning model predicts intracranial hypertension in neurointensive care patients", "Artificial neural networks predict brain pressure", "A recurrent machine learning model predicts intracranial hypertension in neurointensive care patients", "A brain article named: A recurrent machine learning model predicts intracranial hypertension in neurointensive care patients", "A recurrent machine learning model predicts intracranial hypertension in neurointensive care patients, Brain 2021", "Intracranial hypertension in the brain. High pressure brain. Scientific illustration.", "Scientific illustration of intracranial hypertension"]
+
+brain_prompts_2 = [
+    "A brain journal cover for the article: A recurrent machine learning model predicts intracranial hypertension in neurointensive care patients",
+    "A brain journal cover for the article: A recurrent machine learning model predicts intracranial pressure",
+    "A brain journal cover for the article: A machine learning model predicts intracranial hypertension in neurointensive care patients",
+    "A brain journal cover for the article: A machine learning model predicts intracranial hypertension",
+    "A brain journal cover for the article: A machine learning model predicts intracranial hypertension", 
+    "A brain journal cover for the article: A machine learning model predicts intracranial hypertension. By Greg Rutkowski.",
+    "A brain journal cover for the article: A machine learning model predicts intracranial hypertension. By James Gurney."]
+
+brain_imgs = ["base_images/brain_1.png", "base_images/brain_2.png"]
+
+
+
+run(text="new one!!!!", args=args, iterations=100)
+
+args["batch_size"] = 4
+args["gradient_accumulate_every"] = 8
+run(text=brain_prompts[0], img=brain_imgs[0], args=args)
+args["gradient_accumulate_every"] = 16
+run(text=brain_prompts[0], img=brain_imgs[0], args=args)
+
+quit()
+
+multi(brain_prompts_2, args=args)
+
+run(img=brain_imgs[0], args=args)
+
+for text in brain_prompts_2:
+    run(text=text, img=brain_imgs[0], args=args)
+    #run(text=text, img=brain_imgs[1], args=args)
+
+
+
+quit()
+
+args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
+args["iterations"] = 1000
+args["codebook_size"] = 1024
+args["batch_size"] = 8
+
+
+
+args["model_type"] = "convsiren"
+args["num_layers"] = 16
+args["lr"] = 0.01#1e-5
+args["hidden_size"] = 512
+args["sideX"] = 256
+args["sideY"] = 256
+args["batch_size"] = 32
+args["start_image_path"] = None
+args["num_upsampling"] = 2
+args["num_channels"] = 128
+args["mini_batch_size"] = 0
+args["downsample"] = False
+args["stride"] = 2
+args["use_mixed_precision"] = False
+
+run(text="Cake factory", args=args)
+
+quit()
+
+args["model_type"] = "siren"
+args["num_layers"] = 32
+args["lr"] = 1e-5
+args["hidden_size"] = 512
+args["sideX"] = 256
+args["sideY"] = 256
+args["batch_size"] = 32
+args["start_image_path"] = None
+
+
+args["averaging_weight"] = 1.0
+multi(classics + cool_prompts, args=args)
+
+args["averaging_weight"] = 0.5
+multi(classics + cool_prompts, args=args)
+
+args["averaging_weight"] = 0.0
+multi(classics + cool_prompts, args=args)
+
+
+quit()
+
+
+args["averaging_weight"] = 1.0
+multi(cool_prompts, args=args)
+
+args["averaging_weight"] = 0.5
+multi(cool_prompts, args=args)
+
+args["averaging_weight"] = 0.0
+multi(cool_prompts, args=args)
+
+quit()
+
+base_phrases = ["Sad.", "Happy.", "Energetic.", "Piano.", "The sky is blue and the clouds are white.", "Chill, energetic, weird, lively, chillout"]
+target = "Yoko Ono"
+
+#for base in base_phrases:
+#    run(text=base, args=args)
+
+#for base in base_phrases:
+#    run(text=base + " By " + target, args=args)
+
+#for base in base_phrases:
+#    run(text=base + " In the style of " + target, args=args)
+
+
+imagine = Imagine(text=None,
+    img=None,
+    clip_encoding=None,
+    audio=None,
+    save_progress=True,
+    open_folder=False,
+    save_video=True,
+    **args
+   )
+
+diffs = []
+targets = []
+for base in base_phrases:
+    enc_base = imagine.create_text_encoding(base)
+    enc_ext = imagine.create_text_encoding(base + " In the style of " + target)
+    diff = [ext - base for ext, base in zip(enc_ext, enc_base)]
+    targets.append(enc_ext)
+    diffs.append(diff)
+    #run(encoding=diff, args=args)
+
+args["neg_text"] = None
+    
+mean_diff = [torch.stack([d[i] for d in diffs]).mean(dim=0) for i in range(len(diffs[0]))]
+run(encoding=mean_diff, args=args)
+                   
+mean_target = [torch.stack([d[i] for d in targets]).mean(dim=0) for i in range(len(targets[0]))]
+run(encoding=mean_target, args=args)
+
+for base in base_phrases:
+    enc_base = imagine.create_text_encoding(base)
+    enc_ext = [base + ext for base, ext in zip(enc_base, mean_diff)]
+    #run(encoding=enc_ext, args=args)
+
+
+quit()
+
+
+
 multi(cool_prompts, args=args)
 
 args["use_spherical_loss"] = 1
@@ -432,11 +1112,35 @@ human_right_declaration_first_ten = ["All human beings are born free and equal i
 deep_racers = ["Deep Racers", "DeepRacers", "Deep Racing Team", "Deep Learning", "Cool deep racers"]
 
 args["clip_names"] = ["ViT-B/16", "ViT-B/32"]
-args["iterations"] = 1000
+args["iterations"] = 200
 args["codebook_size"] = 1024
-
 args["batch_size"] = 8
 
+base_phrases = ["Sad.", "Happy.", "Energetic.", "Piano.", "The sky is blue and the clouds are white.", "Chill, energetic, weird, lively, chillout"]
+target = "David Hockney"
+
+for base in base_phrases:
+    run(text=base + " " + target, args=args)
+
+
+diffs = []
+for base in base_phrases:
+    enc_base = imagine.encode_text(base)
+    enc_ext = imagine.encode_text(base + " " + target)
+    diff = [ext - base for ext, base in zip(enc_ext, enc_base)]
+    diffs.append(diff)
+    run(encoding=diff, args=args)
+
+mean_diff = [torch.mean([d[i] for d in diffs], dim=0) for i in range(len(diffs[0]))]
+run(encoding=mean_diff, args=args)
+
+for base in base_phrases:
+    enc_base = imagine.encode_text(base)
+    enc_ext = [base + ext for base, ext in zip(enc_base, mean_diff)]
+    run(encoding=enc_ext, args=args)
+
+
+quit()
 run(text="intermezzo", args=args)
 
 args["clip_names"] = ["ViT-B/16", "ViT-B/32", "RN50"]
@@ -1935,14 +2639,13 @@ run(text="Rainforest", args=args)
 
 quit()
 
-args["use_tv_loss"] = 1
+args["tv_loss_scale"] = 1
 run(text="H R Giger", args=args)
 run(text="Rainforest", args=args)
 run(text="Night club", args=args)
 run(text="seascape painting", args=args)
 run(text="Flowing water", args=args)
 run(text="Internet", args=args)
-run(text="Logo of an A.I. startup named AdaLab", args=args)
 args["use_tv_loss"] = 0
 
 args["decay_cutout"] = 1
